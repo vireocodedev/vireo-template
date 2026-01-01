@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "vireo-template-0.9.0",
+  "id": "vireo-template-0.9.1",
   "packages": {
     "@vireocodedev/history": [
       "^0.2.2"

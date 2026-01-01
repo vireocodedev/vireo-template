@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "prepared": true,
   "mavenGroup": "com.vireocode",
-  "templateVersion": "0.9.0",
-  "createVireoVersion": "0.9.0",
+  "templateVersion": "0.9.1",
+  "createVireoVersion": "0.9.1",
   "npm": {
     "@vireocodedev/history": {
       "version": "0.2.2",
@@ -86,15 +86,15 @@
     }
   },
   "files": {
-    ".vireo/template.json": "164121de9bb68ee4ed7236b68d42e17ad30bc9c151cbb6168fb7501c3a515139",
-    "contracts/project-upgrade-policy.json": "0ef975c595de957f3977d7e597cc1bd5d0aa4f9a879a56c2437569ec2621041f",
-    "contracts/template-release-policy.json": "5831e061d609ead0eebe1c3c80f928aaaeba1c7b1209bee8caadbf199c502976",
-    "contracts/vireo-package-compatibility.json": "8dbe00af5b6c96a6b8eabcc3cca9bc351aceabe685edd598b6186f33120b25af",
+    ".vireo/template.json": "16fcc5d23ec4cb4454491afde123955e000b1dff11ff0b00ef8c692bd2355bc4",
+    "contracts/project-upgrade-policy.json": "9f87f9ad4e37e8f04cdadab968f5c2674e94bf6e784f7d8f39618ee0e673e6bd",
+    "contracts/template-release-policy.json": "d0954e9c5062a122294b1332a2a47909d78f030670098de30896e212dfffd7f3",
+    "contracts/vireo-package-compatibility.json": "7dcf50ee0c05302850c2a0687365c185304f7d60b23d929c63ff772795336191",
     "frontend/package-lock.json": "ef9bf1a59808bfd3c16aceed77cbbd9d1a371973893651f7a2be78b376f13d6a",
     "frontend/package.json": "00da1c88f338c98c2b422a306c4a48113f19534bde7e1a2d3c4ca537ede5b16d",
     "gradle.properties": "dd922dd456b260e2d72c5eb01a05dd45d4e2ba35742944f0649188bc8a2aa6d2",
-    "package.json": "48e3e191c866819da1407dc51be73794503767e0a6d37559401e89bceaff63b8"
+    "package.json": "2d275ccaa7cffc8f031b73cbdb54a658495bc1bf2ad5c44ee765a3dffcf98d22"
   },
   "coordinateDigest": "c586d06d3caf13515daa8b9c8f3d677d747aec79630ea72ffd4d47e94ce09931",
-  "fileDigest": "3bdf7e334db3e62b3355b15193c3f6c675b4176ecfdc52faac9f8b85e210dccc"
+  "fileDigest": "bb9d004fd406ca6043f6f72b140b6d4d4608b396075386252979ab1981f1b6ac"
 }
