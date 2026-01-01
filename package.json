@@ -1,7 +1,7 @@
 {
   "name": "starter-template",
   "private": true,
-  "version": "0.8.7",
+  "version": "0.9.0",
   "type": "module",
   "engines": {
     "node": ">=24.15.0 <25",
@@ -14,7 +14,7 @@
     "doctor": "node scripts/vireo-doctor.mjs",
     "doctor:json": "node scripts/vireo-doctor.mjs --json",
     "test:scripts": "node --test scripts/*.test.mjs",
-    "vireo": "npx --yes --package=create-vireo@0.8.7 vireo",
+    "vireo": "npx --yes --package=create-vireo@0.9.0 vireo",
     "release:policy": "node scripts/template-release-policy.mjs",
     "release:prepare": "node scripts/template-release-prepare.mjs",
     "generate:check": "corepack npm run vireo -- check",

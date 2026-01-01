@@ -1,6 +1,100 @@
 {
   "schemaVersion": 1,
-  "prepared": false,
+  "prepared": true,
   "mavenGroup": "com.vireocode",
-  "note": "release:prepare writes anonymous canonical npm and Maven Central evidence for the next immutable release manifest."
+  "templateVersion": "0.9.0",
+  "createVireoVersion": "0.9.0",
+  "npm": {
+    "@vireocodedev/history": {
+      "version": "0.2.2",
+      "tarball": "https://registry.npmjs.org/@vireocodedev/history/-/history-0.2.2.tgz",
+      "integrity": "sha512-PABfwZZT12hynKZ2/8FWmHtHhnJdasifKYWMF1080gwgaAQ0SXQPsD2lUi2o4+X8R1lUg7cEpmIr4w+RuR4YUg==",
+      "attestation": "https://registry.npmjs.org/-/npm/v1/attestations/@vireocodedev%2fhistory@0.2.2",
+      "attestationBundleSha256": "43dde47b6834e2183787d245214f4169ebeccb29024153ebbc4360ed32dc2cc6"
+    },
+    "@vireocodedev/infrastructure": {
+      "version": "0.3.0",
+      "tarball": "https://registry.npmjs.org/@vireocodedev/infrastructure/-/infrastructure-0.3.0.tgz",
+      "integrity": "sha512-F6OFVoymRVXfeR7l22JUXa/7LxGMve0bYpF9NnUWInXI1S9IXezPiK2MuFWK76/9ETZUv6PHnQNIZTe0CMJp4A==",
+      "attestation": "https://registry.npmjs.org/-/npm/v1/attestations/@vireocodedev%2finfrastructure@0.3.0",
+      "attestationBundleSha256": "0e6ba9b110f9656a14b9fc183e023a81d5ee079668e24802c7cbaaab881588d4"
+    },
+    "@vireocodedev/localization": {
+      "version": "0.2.2",
+      "tarball": "https://registry.npmjs.org/@vireocodedev/localization/-/localization-0.2.2.tgz",
+      "integrity": "sha512-QYG+D3s3ODKWYpWRJjJNB/lcOvIGvfssFvOru0wIbtxHYjsadxLfcwwdi0jkc3M/VC/qNFrR5obV46+VGLHT4g==",
+      "attestation": "https://registry.npmjs.org/-/npm/v1/attestations/@vireocodedev%2flocalization@0.2.2",
+      "attestationBundleSha256": "7ccd92113a660a3f99a8b0dcb6eaf2f986674c77c21ede616c0208fd5af9ec27"
+    },
+    "@vireocodedev/query": {
+      "version": "0.2.2",
+      "tarball": "https://registry.npmjs.org/@vireocodedev/query/-/query-0.2.2.tgz",
+      "integrity": "sha512-FyP8gmgZS62tufgR1GLbkFdnxWhJVWjE1jbKITCfc9o2erc8m2Q9fh1c5MuW8E5iySrFvW4PVUr6hIWbOyrRzg==",
+      "attestation": "https://registry.npmjs.org/-/npm/v1/attestations/@vireocodedev%2fquery@0.2.2",
+      "attestationBundleSha256": "7a1564cff988a4ae9835d0f6e8f0dff0adb9c307916c444e7219672fcbfc54b6"
+    },
+    "@vireocodedev/shell": {
+      "version": "0.2.2",
+      "tarball": "https://registry.npmjs.org/@vireocodedev/shell/-/shell-0.2.2.tgz",
+      "integrity": "sha512-92xUUlO3k0YSKL/mpJK5zJUgUHeFj/xttVSTWDHTqJILiK+QxhS86CZ2dFk0gmKIdinsXUwJkqKK8jUKh70q7w==",
+      "attestation": "https://registry.npmjs.org/-/npm/v1/attestations/@vireocodedev%2fshell@0.2.2",
+      "attestationBundleSha256": "e16c2d5dac2b07c266228a458470a31d8870272818c9e253f69f7443e3b0bed5"
+    },
+    "@vireocodedev/sqlite": {
+      "version": "0.2.3",
+      "tarball": "https://registry.npmjs.org/@vireocodedev/sqlite/-/sqlite-0.2.3.tgz",
+      "integrity": "sha512-xc+Y+W1v+sWcsswTugEQYnUN/G6+oA/GLWB0UGKMHgPFPre01c9qPnXrNpFOGtgD+uax7RgdHE5V2HpQhEQYTw==",
+      "attestation": "https://registry.npmjs.org/-/npm/v1/attestations/@vireocodedev%2fsqlite@0.2.3",
+      "attestationBundleSha256": "ede6d2959b670ed78cb896818c27c1f7066fcb79df75216735bfeb7dd6595c0f"
+    },
+    "@vireocodedev/ui": {
+      "version": "0.3.2",
+      "tarball": "https://registry.npmjs.org/@vireocodedev/ui/-/ui-0.3.2.tgz",
+      "integrity": "sha512-mzvPEW2RrlcetIGJv5E/vWgaBYZsfGUQJnOrYD+wCZd9KH06JazcB5SxE2ejPWaxY4TJNuGBEYi0idFxDX7bJA==",
+      "attestation": "https://registry.npmjs.org/-/npm/v1/attestations/@vireocodedev%2fui@0.3.2",
+      "attestationBundleSha256": "384b29da84a4e20c9f0d7a5115115883f828d65c4bec6b69c3d1b68e824dbfa8"
+    }
+  },
+  "maven": {
+    "group": "com.vireocode",
+    "version": "0.4.0",
+    "modules": {
+      "vireo-auth": {
+        "sha256": "fd3b3c5d3ad6b896c7daa4a2d4e5de4c41953b66a5c6c599d0367be9bdfdb21a",
+        "signatureSha256": "ec03f57b4ca0eb3a7251d7f46e6807d49444987455b0dce31cb71fe145e8f338"
+      },
+      "vireo-bom": {
+        "sha256": "81699febf6b896246dfad6f49972ac9aac6f8bef1c8f71cf439c67d14b6f950c",
+        "signatureSha256": "d2d0cacafe272d46038211e12f778f37ecb1af0cee49b36cdcd3181741398d31"
+      },
+      "vireo-core": {
+        "sha256": "79e54dfd1b8fa3f33367d10c227fb095acd93112c160df27d909a4a9704fb36c",
+        "signatureSha256": "e0e1afe831dda44eb33fe26f5da5124dd92ab47bba41281835338259d17e08a1"
+      },
+      "vireo-history": {
+        "sha256": "897e032dc36d42f98ec963b23ca0516155166d54f79a61e47a1a55bf15a81731",
+        "signatureSha256": "ea555a0441421e6f94a0123c492bbe72221e380adc116873ffeabdc5e3c91b97"
+      },
+      "vireo-offline": {
+        "sha256": "c728b7f6900a3c3fc2a4a7bdd0e19f09100b3107ffffbf8cfd06302f71382b81",
+        "signatureSha256": "45d37c2d6fa79f464cb669d7a01cbd758087540f2909ef6017feaf6f5bac0711"
+      },
+      "vireo-query": {
+        "sha256": "a4ce9ab1880100e9cd7a719994f5f88fb2a3f0cf8a33e879bd53e66a6cd978cf",
+        "signatureSha256": "d9811ae523aca1619f1bf645bb62ffea7080344b0c1fc8a909899b501b28383b"
+      }
+    }
+  },
+  "files": {
+    ".vireo/template.json": "164121de9bb68ee4ed7236b68d42e17ad30bc9c151cbb6168fb7501c3a515139",
+    "contracts/project-upgrade-policy.json": "0ef975c595de957f3977d7e597cc1bd5d0aa4f9a879a56c2437569ec2621041f",
+    "contracts/template-release-policy.json": "5831e061d609ead0eebe1c3c80f928aaaeba1c7b1209bee8caadbf199c502976",
+    "contracts/vireo-package-compatibility.json": "8dbe00af5b6c96a6b8eabcc3cca9bc351aceabe685edd598b6186f33120b25af",
+    "frontend/package-lock.json": "ef9bf1a59808bfd3c16aceed77cbbd9d1a371973893651f7a2be78b376f13d6a",
+    "frontend/package.json": "00da1c88f338c98c2b422a306c4a48113f19534bde7e1a2d3c4ca537ede5b16d",
+    "gradle.properties": "dd922dd456b260e2d72c5eb01a05dd45d4e2ba35742944f0649188bc8a2aa6d2",
+    "package.json": "48e3e191c866819da1407dc51be73794503767e0a6d37559401e89bceaff63b8"
+  },
+  "coordinateDigest": "c586d06d3caf13515daa8b9c8f3d677d747aec79630ea72ffd4d47e94ce09931",
+  "fileDigest": "3bdf7e334db3e62b3355b15193c3f6c675b4176ecfdc52faac9f8b85e210dccc"
 }
