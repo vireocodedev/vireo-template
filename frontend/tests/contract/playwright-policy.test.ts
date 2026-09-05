@@ -9,7 +9,7 @@ describe("Playwright execution policy", () => {
       fullyParallel: true,
       retries: process.env.CI ? 1 : 0,
       timeout: 30_000,
-      workers: process.env.CI ? 3 : 2,
+      workers: 2,
     });
     expect(serialPlaywrightPolicy).toEqual({
       ...parallelPlaywrightPolicy,
