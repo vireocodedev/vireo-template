@@ -4,9 +4,7 @@ import {
   EntityQueryFiltersOverlay,
   EntityQueryFilterSummary,
   formatQueryResultCount,
-  readEntityListState,
   useDebouncedSearchText,
-  writeEntityListState,
   type EntityQueryFilterPresentation,
 } from "@/features/entity-query-filters/public";
 import { AppPageHeader } from "@/app/shell/layout/AppPageHeader";
@@ -59,7 +57,8 @@ import { sigSyncSummary } from "@/app/offline/signals/sigSyncSummary";
 import { CacheStatus, ConnectivityStatus, SyncStatus } from "@/app/offline/models/AppOffline";
 import { sigOfflineRecoveryInProgress } from "@/app/offline/signals/sigOfflineRecoveryInProgress";
 import { APP_PAGES } from "@/app/app.pages";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { parseItemListUrlState, serializeItemListUrlState, type ItemListUrlState } from "./item-list-url-state";
 
 type ItemOverlayModes = {
   form: { item?: Item };
@@ -67,17 +66,9 @@ type ItemOverlayModes = {
   filters: Record<string, never>;
 };
 
-const ITEM_LIST_STATE_KEY = "items";
 const ITEM_TABLE_LAYERS = { stickyToolbar: 4, stickyRowHeader: 3 } as const;
 const ITEM_TABLE_SX = { flex: 1, height: "100%", minHeight: 0 } as const;
 const ITEM_COMMAND_CONTROL_HEIGHT = 56;
-const DEFAULT_TABLE_FILTERS: VireoResponsiveTableFilters = {
-  page: 0,
-  rowsPerPage: 10,
-  sortBy: "name",
-  sortDirection: "asc",
-};
-
 function getItemRowKey(item: Item) {
   return item.id;
 }
@@ -497,10 +488,28 @@ export function AppPageItemsFrame({
   );
 }
 
-export function AppPageItems() {
+function AppPageItemsUrlState({ initialSearchParams }: { initialSearchParams: string }) {
   const { t } = useTranslation(ITEMS_TRANSLATION_NAMESPACE);
   const { user } = useAppAuth();
   const navigate = useNavigate();
+  const [, setSearchParams] = useSearchParams();
+  const currentSearchParams = initialSearchParams;
+  const listState = React.useMemo(
+    () => parseItemListUrlState(new URLSearchParams(currentSearchParams)),
+    [currentSearchParams],
+  );
+  const canonicalSearchParams = React.useMemo(() => serializeItemListUrlState(listState), [listState]);
+  const pendingNavigation = React.useRef<string | null>(null);
+  const updateListState = React.useCallback(
+    (update: (current: ItemListUrlState) => ItemListUrlState, replace = false) => {
+      const next = serializeItemListUrlState(update(listState));
+      const nextValue = next.toString();
+      if (nextValue === currentSearchParams || nextValue === pendingNavigation.current) return;
+      pendingNavigation.current = nextValue;
+      setSearchParams(next, { replace });
+    },
+    [currentSearchParams, listState, setSearchParams],
+  );
   const preferences = sigAppPreferences.value;
   const canManage = user?.role === "SUPERADMIN";
   const canMutate =
@@ -510,11 +519,17 @@ export function AppPageItems() {
     sigCacheReadiness.value.status !== CacheStatus.HYDRATING;
   const confirm = useVireoConfirmation();
   const { mutateAsync: deleteItem } = useItemDeleteMutation();
-  const initialState = React.useMemo(() => readEntityListState<VireoResponsiveTableFilters>(ITEM_LIST_STATE_KEY), []);
-  const search = useDebouncedSearchText(initialState?.searchText ?? "");
-  const [queryFilters, setQueryFilters] = React.useState<QueryFilterDocument | null>(initialState?.filters ?? null);
-  const [filters, setFilters] = React.useState<VireoResponsiveTableFilters>(
-    initialState?.table ?? DEFAULT_TABLE_FILTERS,
+  const search = useDebouncedSearchText(listState.searchText);
+  const queryFilters = listState.queryFilters;
+  const filters = listState.table;
+  const setFilters = React.useCallback<React.Dispatch<React.SetStateAction<VireoResponsiveTableFilters>>>(
+    update => {
+      updateListState(current => ({
+        ...current,
+        table: typeof update === "function" ? update(current.table) : update,
+      }));
+    },
+    [updateListState],
   );
   const presentation = React.useMemo<EntityQueryFilterPresentation>(
     () => ({
@@ -548,17 +563,15 @@ export function AppPageItems() {
           value={queryFilters}
           presentation={presentation}
           onApply={value => {
-            setQueryFilters(value);
-            setFilters(current => ({ ...current, page: 0 }));
+            updateListState(current => ({ ...current, queryFilters: value, table: { ...current.table, page: 0 } }));
           }}
           onClear={() => {
-            setQueryFilters(null);
-            setFilters(current => ({ ...current, page: 0 }));
+            updateListState(current => ({ ...current, queryFilters: null, table: { ...current.table, page: 0 } }));
           }}
         />
       ),
     }),
-    [presentation, queryFilters, t],
+    [presentation, queryFilters, t, updateListState],
   );
   const overlays = usePageOverlayModes<ItemOverlayModes>(overlayRenderers);
   const openOverlay = useGuardedOverlayModeSwitch<ItemOverlayModes>(overlays.overlay.open, overlays.open);
@@ -573,44 +586,55 @@ export function AppPageItems() {
     [openOverlay],
   );
   const openHistory = React.useCallback((item: Item) => openOverlay("history", { item }), [openOverlay]);
-  const resolveConflict = React.useCallback(
-    () => void navigate(`${APP_PAGES.settings}#offline`),
-    [navigate],
-  );
+  const resolveConflict = React.useCallback(() => void navigate(`${APP_PAGES.settings}#offline`), [navigate]);
   const openFilters = React.useCallback(() => openOverlay("filters", {}), [openOverlay]);
   const structuredFilterCount = countQueryFilterRules(queryFilters);
 
   const clearQueryFilters = React.useCallback(() => {
-    setQueryFilters(null);
-    setFilters(current => ({ ...current, page: 0 }));
-  }, []);
+    updateListState(current => ({ ...current, queryFilters: null, table: { ...current.table, page: 0 } }));
+  }, [updateListState]);
 
   const clearAllFilters = React.useCallback(() => {
     search.clear();
-    setQueryFilters(null);
-    setFilters(current => ({ ...current, page: 0 }));
-  }, [search]);
+    updateListState(current => ({
+      ...current,
+      searchText: "",
+      queryFilters: null,
+      table: { ...current.table, page: 0 },
+    }));
+  }, [search, updateListState]);
 
-  const removeQueryFilter = React.useCallback((index: number) => {
-    setQueryFilters(current => {
-      if (!current) return null;
-      const rows = current.rows.filter((_, rowIndex) => rowIndex !== index);
-      return rows.length > 0 ? { ...current, rows } : null;
-    });
-    setFilters(current => ({ ...current, page: 0 }));
-  }, []);
+  const removeQueryFilter = React.useCallback(
+    (index: number) => {
+      updateListState(current => {
+        const rows = current.queryFilters?.rows.filter((_, rowIndex) => rowIndex !== index) ?? [];
+        return {
+          ...current,
+          queryFilters: current.queryFilters && rows.length > 0 ? { ...current.queryFilters, rows } : null,
+          table: { ...current.table, page: 0 },
+        };
+      });
+    },
+    [updateListState],
+  );
 
   React.useEffect(() => {
-    setFilters(current => (current.page === 0 ? current : { ...current, page: 0 }));
-  }, [search.committed]);
+    if (search.committed === listState.searchText) return;
+    updateListState(current => ({
+      ...current,
+      searchText: search.committed,
+      table: { ...current.table, page: 0 },
+    }));
+  }, [listState.searchText, search.committed, updateListState]);
 
   React.useEffect(() => {
-    writeEntityListState(ITEM_LIST_STATE_KEY, {
-      searchText: search.input,
-      filters: queryFilters,
-      table: filters,
-    });
-  }, [filters, queryFilters, search.input]);
+    pendingNavigation.current = currentSearchParams;
+  }, [currentSearchParams]);
+
+  React.useEffect(() => {
+    if (canonicalSearchParams.toString() === currentSearchParams) return;
+    setSearchParams(canonicalSearchParams, { replace: true });
+  }, [canonicalSearchParams, currentSearchParams, setSearchParams]);
   const requestDelete = React.useCallback(
     async (item: Item) => {
       await confirm({
@@ -652,5 +676,22 @@ export function AppPageItems() {
         render={overlays.overlay.render}
       />
     </AppPageItemsFrame>
+  );
+}
+
+export function AppPageItems() {
+  const location = useLocation();
+  const [historyRevision, setHistoryRevision] = React.useState(0);
+  React.useEffect(() => {
+    const refreshFromHistory = () => setHistoryRevision(current => current + 1);
+    window.addEventListener("popstate", refreshFromHistory);
+    return () => window.removeEventListener("popstate", refreshFromHistory);
+  }, []);
+  const currentSearchParams = window.location.search.slice(1);
+  return (
+    <AppPageItemsUrlState
+      key={`${location.key}:${historyRevision}:${currentSearchParams}`}
+      initialSearchParams={currentSearchParams}
+    />
   );
 }

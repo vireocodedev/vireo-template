@@ -2,7 +2,7 @@ import { AppStorybookProvider } from "@/app/storybook/AppStorybookProvider";
 import { EntityQueryFiltersOverlay } from "@/features/entity-query-filters/components/EntityQueryFiltersOverlay";
 import { useQuery } from "@tanstack/react-query";
 import type { QueryEngineEntityDefinition } from "@vireocodedev/query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@tanstack/react-query", async importOriginal => ({
@@ -58,7 +58,7 @@ function definitionState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function renderFilters() {
+function renderFilters(onApply = vi.fn()) {
   return render(
     <AppStorybookProvider>
       <EntityQueryFiltersOverlay
@@ -66,7 +66,7 @@ function renderFilters() {
         title="Filter items"
         open
         value={null}
-        onApply={vi.fn()}
+        onApply={onApply}
         onClear={vi.fn()}
         onClose={vi.fn()}
       />
@@ -120,5 +120,31 @@ describe("Entity query-filter overlay loading-state contract", () => {
     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(refetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("applies rules managed by the Vireo TanStack form", async () => {
+    vi.mocked(useQuery).mockReturnValue(definitionState({ data: definition }) as never);
+    const onApply = vi.fn();
+    renderFilters(onApply);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add filter" }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "scanner" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() =>
+      expect(onApply).toHaveBeenCalledWith({
+        entity: "ITEM",
+        rows: [
+          {
+            kind: "leaf",
+            operator: "CONTAINS",
+            parameterized: false,
+            path: "name",
+            selectedOptions: [],
+            value: "scanner",
+          },
+        ],
+      }),
+    );
   });
 });
