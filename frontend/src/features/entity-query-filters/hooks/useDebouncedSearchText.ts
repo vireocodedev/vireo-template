@@ -1,30 +1,55 @@
 import React from "react";
 
-export function useDebouncedSearchText(initialValue: string, delay = 300) {
-  const [input, setInput] = React.useState(initialValue);
-  const [committed, setCommitted] = React.useState(initialValue.trim());
+export function useDebouncedSearchText(initialValue: string, delay = 300, onCommit?: (value: string) => void) {
+  const createSynchronizedState = React.useCallback(
+    () => ({ committed: initialValue.trim(), dirty: false, input: initialValue, source: initialValue }),
+    [initialValue],
+  );
+  const [state, setState] = React.useState(createSynchronizedState);
+  const synchronizedState = state.source === initialValue ? state : createSynchronizedState();
+  const { committed, dirty, input } = synchronizedState;
+
+  const setInput = React.useCallback<React.Dispatch<React.SetStateAction<string>>>(
+    update => {
+      setState(current => {
+        const synchronized = current.source === initialValue ? current : createSynchronizedState();
+        const nextInput = typeof update === "function" ? update(synchronized.input) : update;
+        return { ...synchronized, dirty: true, input: nextInput };
+      });
+    },
+    [createSynchronizedState, initialValue],
+  );
 
   React.useEffect(() => {
-    const timeout = window.setTimeout(() => setCommitted(input.trim()), delay);
+    if (!dirty) return;
+    const timeout = window.setTimeout(() => {
+      const normalized = input.trim();
+      setState(current => ({
+        ...(current.source === initialValue ? current : createSynchronizedState()),
+        committed: normalized,
+        dirty: false,
+      }));
+      onCommit?.(normalized);
+    }, delay);
     return () => window.clearTimeout(timeout);
-  }, [delay, input]);
+  }, [createSynchronizedState, delay, dirty, initialValue, input, onCommit]);
 
   const commitNow = React.useCallback(
     (value = input) => {
       const normalized = value.trim();
-      setInput(value);
-      setCommitted(normalized);
+      setState({ committed: normalized, dirty: false, input: value, source: initialValue });
+      onCommit?.(normalized);
     },
-    [input],
+    [initialValue, input, onCommit],
   );
 
   const clear = React.useCallback(() => {
-    setInput("");
-    setCommitted("");
-  }, []);
+    setState({ committed: "", dirty: false, input: "", source: initialValue });
+    onCommit?.("");
+  }, [initialValue, onCommit]);
 
   return React.useMemo(
     () => ({ input, committed, setInput, commitNow, clear }) as const,
-    [clear, commitNow, committed, input],
+    [clear, commitNow, committed, input, setInput],
   );
 }

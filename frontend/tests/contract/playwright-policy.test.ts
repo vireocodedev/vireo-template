@@ -2,7 +2,7 @@ import { parallelPlaywrightPolicy, serialPlaywrightPolicy } from "../../playwrig
 import { describe, expect, it } from "vitest";
 
 describe("Playwright execution policy", () => {
-  it("fails focused tests and serializes shared-backend browser journeys", () => {
+  it("fails focused tests and bounds shared-backend browser concurrency", () => {
     expect(parallelPlaywrightPolicy).toEqual({
       expect: { timeout: 5_000 },
       forbidOnly: true,

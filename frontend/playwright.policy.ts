@@ -4,7 +4,7 @@ export const parallelPlaywrightPolicy = {
   fullyParallel: true,
   retries: process.env.CI ? 1 : 0,
   timeout: 30_000,
-  // Bound local and CI concurrency because every journey mutates the same test backend.
+  // Bound local and CI concurrency to limit contention on the shared test backend.
   workers: 2,
 } as const;
 

@@ -1,7 +1,7 @@
 import { HistoryQueryKeys } from "@/features/history/api/history.query";
 import { itemApi } from "@/features/item/api/item.api.online";
 import { ItemMutationKeys, ItemQuery, ItemQueryKeys } from "@/features/item/api/item.query";
-import { mergeItemSearchPages } from "@/features/item/hooks/useItemSearchQuery";
+import { createItemSearchQueryOptions, mergeItemSearchPages } from "@/features/item/hooks/useItemSearchQuery";
 import {
   insertItemIntoUnfilteredSearchQueries,
   removeItemFromSearchQueries,
@@ -48,6 +48,23 @@ describe("item query contracts", () => {
     await options.queryFn?.({ signal } as never);
 
     expect(search).toHaveBeenCalledWith(pagination, filters, { signal });
+  });
+
+  it("starts compact-layout searches at the URL-owned page", async () => {
+    const search = vi.spyOn(itemApi, "search").mockResolvedValue({
+      content: [],
+      number: 1,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0,
+    });
+    const signal = new AbortController().signal;
+    const options = createItemSearchQueryOptions({ ...pagination, page: 1 }, filters).infinite;
+
+    await options.queryFn?.({ pageParam: options.initialPageParam, signal } as never);
+
+    expect(options.initialPageParam).toBe(1);
+    expect(search).toHaveBeenCalledWith({ ...pagination, page: 1 }, filters, { signal });
   });
 
   it("normalizes entity identifiers in history keys", () => {

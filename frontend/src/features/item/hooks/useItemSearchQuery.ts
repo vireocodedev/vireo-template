@@ -6,21 +6,28 @@ import { useVireoPageLayout } from "@vireocodedev/ui";
 import type { Item } from "../models/Item";
 import { useMediaQuery, useTheme } from "@mui/material";
 
+export function createItemSearchQueryOptions(pagination: PageableParams, filters: ItemFilters) {
+  return {
+    infinite: { ...ItemQuery.searchInfinite(pagination, filters), initialPageParam: pagination.page },
+    paged: ItemQuery.search(pagination, filters),
+  };
+}
+
 export function useItemSearchQuery(pagination: PageableParams, filters: ItemFilters) {
   const { isCompact } = useVireoPageLayout();
   const theme = useTheme();
   // Four operational columns need more room than the general page-layout compact threshold provides.
   const constrainedViewport = useMediaQuery(theme.breakpoints.down("lg"));
   const useMobileLayout = isCompact || constrainedViewport;
+  const options = createItemSearchQueryOptions(pagination, filters);
   const paged = useQuery({
-    ...ItemQuery.search(pagination, filters),
+    ...options.paged,
     enabled: !useMobileLayout,
     placeholderData: keepPreviousData,
   });
   const infinite = useInfiniteQuery({
-    ...ItemQuery.searchInfinite(pagination, filters),
+    ...options.infinite,
     enabled: useMobileLayout,
-    initialPageParam: pagination.page,
     placeholderData: keepPreviousData,
   });
   const infiniteData = mergeItemSearchPages(infinite.data?.pages);

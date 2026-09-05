@@ -523,7 +523,21 @@ function AppPageItemsUrlState({ initialSearchParams }: { initialSearchParams: st
     sigCacheReadiness.value.status !== CacheStatus.HYDRATING;
   const confirm = useVireoConfirmation();
   const { mutateAsync: deleteItem } = useItemDeleteMutation();
-  const search = useDebouncedSearchText(listState.searchText);
+  const commitSearchText = React.useCallback(
+    (searchText: string) => {
+      updateListState(current =>
+        searchText === current.searchText
+          ? current
+          : {
+              ...current,
+              searchText,
+              table: { ...current.table, page: 0 },
+            },
+      );
+    },
+    [updateListState],
+  );
+  const search = useDebouncedSearchText(listState.searchText, 300, commitSearchText);
   const queryFilters = listState.queryFilters;
   const filters = listState.table;
   const setFilters = React.useCallback<React.Dispatch<React.SetStateAction<VireoResponsiveTableFilters>>>(
@@ -599,14 +613,13 @@ function AppPageItemsUrlState({ initialSearchParams }: { initialSearchParams: st
   }, [updateListState]);
 
   const clearAllFilters = React.useCallback(() => {
-    search.clear();
     updateListState(current => ({
       ...current,
       searchText: "",
       queryFilters: null,
       table: { ...current.table, page: 0 },
     }));
-  }, [search, updateListState]);
+  }, [updateListState]);
 
   const removeQueryFilter = React.useCallback(
     (index: number) => {
@@ -621,15 +634,6 @@ function AppPageItemsUrlState({ initialSearchParams }: { initialSearchParams: st
     },
     [updateListState],
   );
-
-  React.useEffect(() => {
-    if (search.committed === listState.searchText) return;
-    updateListState(current => ({
-      ...current,
-      searchText: search.committed,
-      table: { ...current.table, page: 0 },
-    }));
-  }, [listState.searchText, search.committed, updateListState]);
 
   React.useEffect(() => {
     pendingNavigation.current = currentSearchParams;
@@ -686,10 +690,12 @@ function AppPageItemsUrlState({ initialSearchParams }: { initialSearchParams: st
 export function AppPageItems() {
   useLocation();
   const [historyRevision, setHistoryRevision] = React.useState(0);
+
   React.useEffect(() => {
     const refreshFromHistory = () => setHistoryRevision(current => current + 1);
     window.addEventListener("popstate", refreshFromHistory);
     return () => window.removeEventListener("popstate", refreshFromHistory);
   }, []);
+
   return <AppPageItemsUrlState key={historyRevision} initialSearchParams={window.location.search.slice(1)} />;
 }

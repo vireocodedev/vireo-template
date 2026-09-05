@@ -99,7 +99,7 @@ export function AppShellLayout() {
   const navigateTo = React.useCallback(
     (path: string) => {
       preloadAppPage(path);
-      void navigate(path, { viewTransition: true });
+      void navigate(path, { flushSync: true, viewTransition: true });
       setMobileOpen(false);
       setAccountAnchor(null);
     },
