@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { requestOfflineHydration, runOfflineRecovery } from "@/app/offline/services/app-offline-hydration";
+import { sigOfflineRecoveryInProgress } from "@/app/offline/signals/sigOfflineRecoveryInProgress";
 
 function deferred() {
   let resolve!: () => void;
@@ -10,6 +11,10 @@ function deferred() {
 }
 
 describe("offline hydration coordinator", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("folds replay-period batches into the final recovery hydration", async () => {
     const hydrate = vi.fn().mockResolvedValue(undefined);
 
@@ -45,5 +50,40 @@ describe("offline hydration coordinator", () => {
     await Promise.all([firstRecovery, secondRecovery]);
 
     expect(secondWork).toHaveBeenCalledOnce();
+  });
+
+  it("holds one origin-wide lock across replay and hydration", async () => {
+    const order: string[] = [];
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: vi.fn(async (_name: string, operation: () => Promise<void>) => {
+          order.push("lock:start");
+          await operation();
+          order.push("lock:end");
+        }),
+      },
+    });
+
+    await runOfflineRecovery(
+      async () => {
+        order.push("replay");
+      },
+      async () => {
+        order.push("hydrate");
+      },
+    );
+
+    expect(order).toEqual(["lock:start", "replay", "hydrate", "lock:end"]);
+  });
+
+  it("exposes recovery as busy until replay and hydration finish", async () => {
+    const replay = deferred();
+    const recovery = runOfflineRecovery(() => replay.promise, async () => undefined);
+
+    await vi.waitFor(() => expect(sigOfflineRecoveryInProgress.value).toBe(true));
+    replay.resolve();
+    await recovery;
+
+    expect(sigOfflineRecoveryInProgress.value).toBe(false);
   });
 });

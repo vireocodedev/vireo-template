@@ -7,6 +7,7 @@ import { useItemUpdateMutation } from "../../hooks/useItemUpdateMutation";
 import { useItemForm } from "../../hooks/useItemForm";
 import { DEFAULT_ITEM_FORM_VALIDATION_CONTEXT, type Item } from "../../models/Item";
 import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
+import { sigOfflineRecoveryInProgress } from "@/app/offline/signals/sigOfflineRecoveryInProgress";
 import { useItemTranslation } from "../../localization/use-item-translation";
 
 export type ItemFormOverlayProps = {
@@ -25,6 +26,7 @@ export function ItemFormOverlay({ item, open, onClose, onExited }: ItemFormOverl
   const createItem = useItemCreateMutation();
   const updateItem = useItemUpdateMutation();
   const preferences = sigAppPreferences.value;
+  const recoveryInProgress = sigOfflineRecoveryInProgress.value;
   const mode = getItemFormMode(item);
   const submit = async (value: Item) => {
     if (item) {
@@ -71,6 +73,7 @@ export function ItemFormOverlay({ item, open, onClose, onExited }: ItemFormOverl
           editing={mode === AppFormMode.enum.UPDATE}
           onCancel={requestClose}
           pending={savePending}
+          submissionDisabled={recoveryInProgress}
         />
       )}
     >

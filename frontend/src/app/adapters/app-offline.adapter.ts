@@ -18,6 +18,7 @@ import {
   type OfflineItemCommand,
 } from "../offline/services/app-offline-rebase";
 import { runOfflineRecovery } from "../offline/services/app-offline-hydration";
+import { withAppOfflineLock } from "../offline/services/app-offline-lock";
 import { patchCacheReadiness, patchOfflineSimulation, patchSyncSummary } from "../offline/actions/app-offline-actions";
 import { CacheStatus, ConnectivityStatus, SyncStatus } from "../offline/models/AppOffline";
 import { sigConnectivityStatus } from "../offline/signals/sigConnectivityStatus";
@@ -141,11 +142,6 @@ export function markOfflineCacheUnavailable(error: unknown): void {
   markOfflineStorageUnavailable(error);
 }
 
-async function underOfflineLock<T>(operation: () => Promise<T>): Promise<T> {
-  const locks = typeof navigator === "undefined" ? undefined : navigator.locks;
-  return locks ? locks.request("starter-template:offline-data", operation) : operation();
-}
-
 function toCached(item: Item, pending = false, conflict = false, deleted = false): CachedItem {
   return { ...item, pending, conflict, deleted };
 }
@@ -250,7 +246,7 @@ export async function validateOfflineCurrentUser(): Promise<AppOfflineCurrentUse
   if (sigConnectivityStatus.value === ConnectivityStatus.OFFLINE) {
     const cachedUser = readCachedOfflineCurrentUser();
     if (!cachedUser || !(await ensureOfflineStorage())) return null;
-    await ensureOfflineOwner(cachedUser.id);
+    await withAppOfflineLock(() => ensureOfflineOwnerUnlocked(cachedUser.id));
     return cachedUser;
   }
   return validateLiveOfflineCurrentUser();
@@ -258,26 +254,28 @@ export async function validateOfflineCurrentUser(): Promise<AppOfflineCurrentUse
 
 /** Validates the server identity even before the heartbeat has established online connectivity. */
 export async function validateLiveOfflineCurrentUser(): Promise<AppOfflineCurrentUser> {
+  return withAppOfflineLock(validateLiveOfflineCurrentUserUnlocked);
+}
+
+async function validateLiveOfflineCurrentUserUnlocked(): Promise<AppOfflineCurrentUser> {
   const user = await offlineShowcaseTransport.currentUser();
   if (!(await ensureOfflineStorage())) throw offlineStorageError();
-  await ensureOfflineOwner(user.id);
+  await ensureOfflineOwnerUnlocked(user.id);
   persistCurrentUser(user);
   return user;
 }
 
-async function ensureOfflineOwner(owner: string): Promise<void> {
-  await underOfflineLock(async () => {
-    if (appOfflineRuntime.shouldUseInMemoryFallback()) {
-      if (inMemoryOfflineOwner && inMemoryOfflineOwner !== owner) {
-        appOfflineRuntime.clearInMemoryStores();
-        queuedCommandsForInMemoryRetry.clear();
-        failedCommandsForInMemoryRetry.clear();
-      }
-      inMemoryOfflineOwner = owner;
-      return;
+async function ensureOfflineOwnerUnlocked(owner: string): Promise<void> {
+  if (appOfflineRuntime.shouldUseInMemoryFallback()) {
+    if (inMemoryOfflineOwner && inMemoryOfflineOwner !== owner) {
+      appOfflineRuntime.clearInMemoryStores();
+      queuedCommandsForInMemoryRetry.clear();
+      failedCommandsForInMemoryRetry.clear();
     }
-    await appOfflineTransport.sendWorkerRequest({ type: "ensureOfflineOwner", owner });
-  });
+    inMemoryOfflineOwner = owner;
+    return;
+  }
+  await appOfflineTransport.sendWorkerRequest({ type: "ensureOfflineOwner", owner });
 }
 
 async function fetchAuthoritativeItems(): Promise<Item[]> {
@@ -295,7 +293,7 @@ async function fetchAuthoritativeItems(): Promise<Item[]> {
 /** Fetches the admitted Item domain as one bounded snapshot. Generated entities remain remote-only. */
 export async function hydrateOfflineItems(): Promise<void> {
   if (sigConnectivityStatus.value !== ConnectivityStatus.ONLINE || !(await ensureOfflineStorage())) return;
-  await underOfflineLock(hydrateOfflineItemsUnlocked);
+  await withAppOfflineLock(hydrateOfflineItemsUnlocked);
 }
 
 async function hydrateOfflineItemsUnlocked(): Promise<void> {
@@ -348,7 +346,7 @@ export async function applyQueuedItemMutation(
   command: { method: string; url: string; body: unknown | null },
 ): Promise<void> {
   if (!(await ensureOfflineStorage())) throw offlineStorageError();
-  await underOfflineLock(async () => {
+  await withAppOfflineLock(async () => {
     const queuedCommand = {
       commandId: crypto.randomUUID(),
       createdAt: nextCommandTimestamp(),
@@ -386,7 +384,23 @@ export async function replayOfflineItems(): Promise<void> {
     });
     return;
   }
-  await underOfflineLock(replayOfflineItemsUnlocked);
+  await withAppOfflineLock(replayOfflineItemsUnlocked);
+}
+
+/** Validates ownership, replays queued intent, and hydrates one authoritative snapshot atomically. */
+export async function recoverOfflineItems(): Promise<void> {
+  if (sigConnectivityStatus.value !== ConnectivityStatus.ONLINE || !(await ensureOfflineStorage())) return;
+  await runOfflineRecovery(async () => {
+    const currentUser = await validateLiveOfflineCurrentUserUnlocked();
+    if (currentUser.role !== "SUPERADMIN") {
+      patchSyncSummary({
+        error: "Your current role cannot replay queued Item changes.",
+        status: SyncStatus.BLOCKED,
+      });
+      return;
+    }
+    await replayOfflineItemsUnlocked();
+  }, hydrateOfflineItemsUnlocked);
 }
 
 const ReplayResponse = z.object({
@@ -543,47 +557,46 @@ export async function retryOfflineChanges(): Promise<void> {
   }
   if (!(await ensureOfflineStorage())) return;
   await runOfflineRecovery(async () => {
-    await underOfflineLock(async () => {
-      const authoritativeItems = await fetchAuthoritativeItems();
-      const authoritativeVersions: AuthoritativeItemVersion[] = authoritativeItems.map(item => ({
-        id: item.id,
-        version: item.version,
-      }));
-      if (appOfflineRuntime.shouldUseInMemoryFallback()) {
-        const queued = [...queuedCommandsForInMemoryRetry.values()];
-        if (queued.length === 0 && sigSyncSummary.value.failed > 0) {
-          throw new Error("Failed offline commands cannot be retried after this tab's in-memory cache was reset.");
-        }
-        if (queued.length) {
-          const rebased = rebaseOfflineItemCommands(queued, authoritativeVersions);
-          await appOfflineQueue.delete(queued.map(command => command.commandId));
-          if (rebased.deletedItemIds.length) await appOfflineItems.delete(rebased.deletedItemIds);
-          for (const command of rebased.commands) {
-            const itemId = offlineItemIdFor(command);
-            const local = (await appOfflineItems.list()).find(item => item.id === itemId);
-            if (local) await appOfflineItems.upsert({ ...local, conflict: false, pending: true });
-            await appOfflineQueue.enqueue(command);
-          }
-          queuedCommandsForInMemoryRetry.clear();
-          for (const command of rebased.commands) queuedCommandsForInMemoryRetry.set(command.commandId, command);
-          failedCommandsForInMemoryRetry.clear();
-        }
-        return;
+    await validateLiveOfflineCurrentUserUnlocked();
+    const authoritativeItems = await fetchAuthoritativeItems();
+    const authoritativeVersions: AuthoritativeItemVersion[] = authoritativeItems.map(item => ({
+      id: item.id,
+      version: item.version,
+    }));
+    if (appOfflineRuntime.shouldUseInMemoryFallback()) {
+      const queued = [...queuedCommandsForInMemoryRetry.values()];
+      if (queued.length === 0 && sigSyncSummary.value.failed > 0) {
+        throw new Error("Failed offline commands cannot be retried after this tab's in-memory cache was reset.");
       }
+      if (queued.length) {
+        const rebased = rebaseOfflineItemCommands(queued, authoritativeVersions);
+        await appOfflineQueue.delete(queued.map(command => command.commandId));
+        if (rebased.deletedItemIds.length) await appOfflineItems.delete(rebased.deletedItemIds);
+        for (const command of rebased.commands) {
+          const itemId = offlineItemIdFor(command);
+          const local = (await appOfflineItems.list()).find(item => item.id === itemId);
+          if (local) await appOfflineItems.upsert({ ...local, conflict: false, pending: true });
+          await appOfflineQueue.enqueue(command);
+        }
+        queuedCommandsForInMemoryRetry.clear();
+        for (const command of rebased.commands) queuedCommandsForInMemoryRetry.set(command.commandId, command);
+        failedCommandsForInMemoryRetry.clear();
+      }
+    } else {
       await appOfflineTransport.sendWorkerRequest({
         type: "rebaseOfflineCommands",
         authoritativeItems: authoritativeVersions,
       });
-    });
+    }
     patchSyncSummary({ error: null, status: SyncStatus.IDLE });
     await refreshSyncSummary();
-    await replayOfflineItems();
-  }, hydrateOfflineItems);
+    await replayOfflineItemsUnlocked();
+  }, hydrateOfflineItemsUnlocked);
 }
 
 export async function discardOfflineChanges(): Promise<void> {
   if (!(await ensureOfflineStorage())) return;
-  await underOfflineLock(async () => sendOfflineMaintenanceRequest("discardOfflineChanges"));
+  await withAppOfflineLock(async () => sendOfflineMaintenanceRequest("discardOfflineChanges"));
   patchSyncSummary({ error: null, failed: 0, pending: 0, status: SyncStatus.IDLE });
   await hydrateOfflineItems();
 }
@@ -596,15 +609,14 @@ export async function resetOfflineCache(): Promise<void> {
   if (!appOfflineRuntime.shouldUseInMemoryFallback()) appOfflineRuntime.reset();
   await initializeOfflineData();
   if (sigConnectivityStatus.value === ConnectivityStatus.ONLINE && canUseOfflineStorage()) {
-    await validateOfflineCurrentUser();
-    await hydrateOfflineItems();
+    await recoverOfflineItems();
   }
 }
 
 /** Removes the admitted domain and queued commands before another authenticated owner can use this tab. */
 export async function purgeOfflineData(): Promise<void> {
   if (!(await ensureOfflineStorage())) return;
-  await underOfflineLock(async () => sendOfflineMaintenanceRequest("clearOfflineData"));
+  await withAppOfflineLock(async () => sendOfflineMaintenanceRequest("clearOfflineData"));
   inMemoryOfflineOwner = null;
   patchCacheReadiness({ error: null, status: CacheStatus.STALE });
   patchSyncSummary({ error: null, failed: 0, pending: 0, status: SyncStatus.IDLE });

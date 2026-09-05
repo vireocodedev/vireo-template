@@ -1,23 +1,33 @@
 import { expect, test } from "@playwright/test";
 import { authenticateAsDevelopmentAdministrator } from "./support/authentication";
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>(resolvePromise => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+async function expectConnectivity(
+  page: import("@playwright/test").Page,
+  projectName: string,
+  label: "Online" | "Offline",
+) {
+  if (projectName === "mobile-chromium") await page.getByRole("button", { name: "Open navigation" }).click();
+  await expect(page.getByRole("button", { name: "Open offline settings" })).toContainText(label);
+  if (projectName === "mobile-chromium") {
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: "Close navigation" })).not.toBeVisible();
+  }
+}
+
 test("offline Item changes survive reload and replay in order", async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   const suffix = `${testInfo.project.name}-${Date.now()}`;
   const createdName = `Offline ${suffix}`;
   const updatedName = `Replayed ${suffix}`;
   const deletedName = `Deleted ${suffix}`;
-  const expectConnectivity = async (label: "Online" | "Offline") => {
-    if (testInfo.project.name === "mobile-chromium") {
-      await page.getByRole("button", { name: "Open navigation" }).click();
-    }
-    await expect(page.getByRole("button", { name: "Open offline settings" })).toContainText(label);
-    if (testInfo.project.name === "mobile-chromium") {
-      await page.keyboard.press("Escape");
-      await expect(page.getByRole("button", { name: "Close navigation" })).not.toBeVisible();
-    }
-  };
-
   await authenticateAsDevelopmentAdministrator(page);
   await expect
     .poll(() =>
@@ -27,11 +37,11 @@ test("offline Item changes survive reload and replay in order", async ({ page },
       })),
     )
     .toEqual({ crossOriginIsolated: true, hasSharedArrayBuffer: true });
-  await expectConnectivity("Online");
+  await expectConnectivity(page, testInfo.project.name, "Online");
 
   await page.goto("/settings#offline");
   await page.getByRole("switch", { name: "Offline simulator" }).check();
-  await expectConnectivity("Offline");
+  await expectConnectivity(page, testInfo.project.name, "Offline");
 
   await page.goto("/items");
   await page.getByRole("button", { name: "Create item" }).first().click();
@@ -76,7 +86,7 @@ test("offline Item changes survive reload and replay in order", async ({ page },
 
   await page.goto("/settings#offline");
   await page.getByRole("switch", { name: "Offline simulator" }).uncheck();
-  await expectConnectivity("Online");
+  await expectConnectivity(page, testInfo.project.name, "Online");
   await expect(page.getByText(/0 pending · 0 failed/u)).toBeVisible({ timeout: 30_000 });
 
   await page.goto("/items");
@@ -88,4 +98,43 @@ test("offline Item changes survive reload and replay in order", async ({ page },
   await search.fill(deletedName);
   await search.press("Enter");
   await expect(page.getByText("No items match the current search and filters.")).toBeVisible();
+});
+
+test("an open Item draft survives recovery while submission is disabled", async ({ page }) => {
+  test.setTimeout(90_000);
+  await authenticateAsDevelopmentAdministrator(page);
+  await page.goto("/items");
+  await page.getByRole("button", { name: "Create item" }).first().click();
+  const name = page.getByRole("textbox", { name: "Name", exact: true });
+  const save = page.getByRole("button", { name: "Create item" }).last();
+  await name.fill("Draft preserved across recovery");
+
+  await page.evaluate(async () => {
+    const { patchOfflineSimulation } = await import("/src/app/offline/actions/app-offline-actions.ts");
+    patchOfflineSimulation({ enabled: true });
+  });
+  await expect(page.getByText("Working offline.")).toBeVisible({ timeout: 20_000 });
+
+  const hydrationStarted = deferred();
+  const releaseHydration = deferred();
+  let delayedHydration = false;
+  await page.route("**/api/items/search*", async route => {
+    if (delayedHydration || route.request().method() !== "POST") return route.continue();
+    delayedHydration = true;
+    hydrationStarted.resolve();
+    await releaseHydration.promise;
+    await route.continue();
+  });
+  await page.evaluate(async () => {
+    const { patchOfflineSimulation } = await import("/src/app/offline/actions/app-offline-actions.ts");
+    patchOfflineSimulation({ enabled: false });
+  });
+
+  await hydrationStarted.promise;
+  await expect(save).toBeDisabled();
+  await expect(name).toHaveValue("Draft preserved across recovery");
+
+  releaseHydration.resolve();
+  await expect(save).toBeEnabled();
+  await expect(name).toHaveValue("Draft preserved across recovery");
 });

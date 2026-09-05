@@ -8,6 +8,7 @@ import {
   hydrateOfflineItems,
   initializeOfflineData,
   purgeOfflineData,
+  recoverOfflineItems,
   replayOfflineItems,
   resetOfflineCache,
   retryOfflineChanges,
@@ -237,6 +238,51 @@ describe("offline Item data", () => {
 
     expect(sentCommandIds).toHaveLength(2);
     expect(await appOfflineQueue.getSize()).toBe(2);
+  });
+
+  it("recovers the owner, queued commands, and authoritative snapshot under one lock", async () => {
+    const id = "00000000-0000-4000-8000-000000000520";
+    const item: Item = {
+      id,
+      version: 0,
+      name: "Atomic recovery",
+      description: "",
+      quantity: 1,
+      status: "DRAFT",
+    };
+    await applyQueuedItemMutation({ ...item, pending: true, conflict: false, deleted: false }, id, {
+      method: "POST",
+      url: "/api/items",
+      body: item,
+    });
+    configureOfflineShowcaseTransport({
+      currentUser: async () => ({
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        username: "admin",
+        role: "SUPERADMIN",
+        validatedAt: Date.now(),
+      }),
+      replay: async commands => ({
+        results: commands.map(command => ({
+          commandId: command.commandId,
+          success: true,
+          status: 201,
+          error: null,
+          reason: "APPLIED" as const,
+        })),
+      }),
+      searchItems: async () => ({ content: [item], number: 0, size: 100, totalElements: 1, totalPages: 1 }),
+    });
+    const request = vi.fn(async (_name: string, operation: () => Promise<void>) => operation());
+    vi.stubGlobal("navigator", { locks: { request } });
+    patchOfflineSimulation({ enabled: false, failNextReplay: false });
+    setConnectivityStatus(ConnectivityStatus.ONLINE);
+
+    await recoverOfflineItems();
+
+    expect(request).toHaveBeenCalledOnce();
+    expect(await appOfflineQueue.getSize()).toBe(0);
+    expect((await appOfflineItems.list()).find(candidate => candidate.id === id)).toMatchObject({ pending: false });
   });
 
   it("reissues a failed command with a fresh command ID before replaying it", async () => {

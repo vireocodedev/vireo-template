@@ -10,7 +10,7 @@ import { recordAppHeartbeat } from "../services/app-offline-heartbeat";
 import { ConnectivityStatus } from "../models/AppOffline";
 import { sigConnectivityStatus } from "../signals/sigConnectivityStatus";
 import { sigOfflineSimulation } from "../signals/sigOfflineSimulation";
-import { requestOfflineHydration, runOfflineRecovery } from "../services/app-offline-hydration";
+import { requestOfflineHydration } from "../services/app-offline-hydration";
 
 const loadOfflineAdapter = () => import("@/app/adapters/app-offline.adapter");
 
@@ -109,12 +109,7 @@ export function AppOfflineProvider({ children }: React.PropsWithChildren) {
     previousConnectivity.current = connectivity;
     if (!recovered || user === null) return;
     void loadOfflineAdapter()
-      .then(({ hydrateOfflineItems, replayOfflineItems, validateOfflineCurrentUser }) =>
-        runOfflineRecovery(async () => {
-          await validateOfflineCurrentUser();
-          await replayOfflineItems();
-        }, hydrateOfflineItems),
-      )
+      .then(({ recoverOfflineItems }) => recoverOfflineItems())
       .catch(() => queryClient.invalidateQueries());
   }, [connectivity, queryClient, user]);
 

@@ -30,7 +30,13 @@ function deferred<T>() {
   return { promise, reject, resolve };
 }
 
-function ItemFormHarness({ onSubmit }: { onSubmit: (value: Item) => Promise<void> }) {
+function ItemFormHarness({
+  onSubmit,
+  submissionDisabled = false,
+}: {
+  onSubmit: (value: Item) => Promise<void>;
+  submissionDisabled?: boolean;
+}) {
   const [pending, setPending] = React.useState(false);
   const form = useItemForm({
     initialValue: item,
@@ -49,7 +55,13 @@ function ItemFormHarness({ onSubmit }: { onSubmit: (value: Item) => Promise<void
   return (
     <form.Form layoutWidth="full">
       <ItemFormFields form={form} mode={AppFormMode.enum.UPDATE} />
-      <ItemFormActions editing form={form} onCancel={vi.fn()} pending={pending} />
+      <ItemFormActions
+        editing
+        form={form}
+        onCancel={vi.fn()}
+        pending={pending}
+        submissionDisabled={submissionDisabled}
+      />
     </form.Form>
   );
 }
@@ -84,6 +96,21 @@ describe("busy action loading-state contract", () => {
       expect(save).toBeEnabled();
       expect(cancel).toBeEnabled();
     });
+  });
+
+  it("preserves an editable draft but disables submission during offline recovery", () => {
+    render(
+      <AppStorybookProvider>
+        <ItemFormHarness onSubmit={vi.fn().mockResolvedValue(undefined)} submissionDisabled />
+      </AppStorybookProvider>,
+    );
+
+    const name = screen.getByRole("textbox", { name: "Name" });
+    fireEvent.change(name, { target: { value: "Draft preserved during recovery" } });
+
+    expect(name).toHaveValue("Draft preserved during recovery");
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
   });
 
   it("retains the login card, prevents duplicate submission, and recovers after failure", async () => {

@@ -57,6 +57,7 @@ import { sigConnectivityStatus } from "@/app/offline/signals/sigConnectivityStat
 import { sigCacheReadiness } from "@/app/offline/signals/sigCacheReadiness";
 import { sigSyncSummary } from "@/app/offline/signals/sigSyncSummary";
 import { CacheStatus, ConnectivityStatus, SyncStatus } from "@/app/offline/models/AppOffline";
+import { sigOfflineRecoveryInProgress } from "@/app/offline/signals/sigOfflineRecoveryInProgress";
 
 type ItemOverlayModes = {
   form: { item?: Item };
@@ -498,6 +499,7 @@ export function AppPageItems() {
   const canManage = user?.role === "SUPERADMIN";
   const canMutate =
     canManage &&
+    !sigOfflineRecoveryInProgress.value &&
     sigSyncSummary.value.status !== SyncStatus.SYNCING &&
     sigCacheReadiness.value.status !== CacheStatus.HYDRATING;
   const confirm = useVireoConfirmation();
