@@ -78,6 +78,10 @@ const itemEn = {
     },
   },
   messages: {
+    queued: "{{name}} queued for synchronization",
+    synchronized_one: "{{count}} queued change synchronized.",
+    synchronized_few: "{{count}} queued changes synchronized.",
+    synchronized_other: "{{count}} queued changes synchronized.",
     created: "{{name}} created",
     createFailed: "Item could not be created.",
     updated: "{{name}} updated",

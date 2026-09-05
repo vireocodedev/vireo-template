@@ -3,10 +3,13 @@ import { patchOfflineSimulation } from "@/app/offline/actions/app-offline-action
 import { expireAppHeartbeat } from "@/app/offline/services/app-offline-heartbeat";
 import { sigConnectivityStatus } from "@/app/offline/signals/sigConnectivityStatus";
 import { sigOfflineSimulation } from "@/app/offline/signals/sigOfflineSimulation";
+import { sigSyncSummary } from "@/app/offline/signals/sigSyncSummary";
 import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 import { ConnectivityStatus } from "@/app/offline/models/AppOffline";
 import { createAppPreferencesStorage } from "@/app/ui/preferences/services/app-preferences-storage";
 import { toast } from "@vireocodedev/ui/sonner";
+import { appI18n } from "@/app/ui/localization/app-i18n";
+import { ITEM_TRANSLATION_NAMESPACE } from "@/app/app.localization";
 
 let disposeSignalEffects: (() => void) | undefined;
 let heartbeatTimer: number | undefined;
@@ -52,12 +55,28 @@ export function initSignalEffects(): void {
     }
   });
 
+  let previousSynchronizationSequence = sigSyncSummary.value.synchronizationSequence;
+  const disposeSynchronization = effect(() => {
+    const summary = sigSyncSummary.value;
+    if (summary.synchronizationSequence === previousSynchronizationSequence) return;
+    previousSynchronizationSequence = summary.synchronizationSequence;
+    if (summary.lastSynchronizedCount > 0) {
+      toast.success(
+        appI18n.t("messages.synchronized", {
+          count: summary.lastSynchronizedCount,
+          ns: ITEM_TRANSLATION_NAMESPACE,
+        }),
+      );
+    }
+  });
+
   heartbeatTimer = window.setInterval(() => expireAppHeartbeat(), 1_000);
   const previousDispose = disposeSignalEffects;
   disposeSignalEffects = () => {
     previousDispose?.();
     disposeConnectivity();
     disposeSimulation();
+    disposeSynchronization();
     if (heartbeatTimer !== undefined) window.clearInterval(heartbeatTimer);
     heartbeatTimer = undefined;
   };

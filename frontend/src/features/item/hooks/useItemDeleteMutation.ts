@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useVireoMutation } from "@vireocodedev/ui/tanstack-query";
 import { useItemTranslation } from "../localization/use-item-translation";
 import type { Item } from "../models/Item";
+import type { ItemMutationResult } from "../api/item.api";
 import {
   removeItemFromSearchQueries,
   restoreItemSearchQueries,
@@ -15,13 +16,14 @@ export function useItemDeleteMutation() {
   const { t } = useItemTranslation();
   const queryClient = useQueryClient();
 
-  return useVireoMutation<Item, Error, Item, ItemSearchQuerySnapshot>({
+  return useVireoMutation<ItemMutationResult<Item>, Error, Item, ItemSearchQuerySnapshot>({
     mutationKey: ItemMutationKeys.delete,
     mutationFn: async item => {
-      await itemApi.delete(item.id, item.version);
-      return item;
+      const result = await itemApi.delete(item.id, item.version);
+      return { ...result, value: item };
     },
-    successMessage: item => t("messages.deleted", { name: item.name }),
+    successMessage: result =>
+      t(result.persistence === "QUEUED" ? "messages.queued" : "messages.deleted", { name: result.value.name }),
     errorMessage: t("messages.deleteFailed"),
     onMutate: async item => {
       const snapshot = await snapshotItemSearchQueries(queryClient);

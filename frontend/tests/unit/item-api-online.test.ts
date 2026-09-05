@@ -14,13 +14,14 @@ describe("ItemApiOnline", () => {
     });
     const request = vi.fn().mockResolvedValue(item);
     const api = new ItemApiOnline() as unknown as {
-      create: (value: typeof item) => Promise<typeof item>;
+      create: (value: typeof item) => Promise<{ persistence: "SAVED"; value: typeof item }>;
       httpPost: ReturnType<typeof vi.fn>;
     };
     api.httpPost = vi.fn(() => request);
 
-    await api.create(item);
+    const result = await api.create(item);
 
     expect(request).toHaveBeenCalledWith("", expect.objectContaining({ id: item.id, version: 0 }));
+    expect(result).toEqual({ persistence: "SAVED", value: item });
   });
 });

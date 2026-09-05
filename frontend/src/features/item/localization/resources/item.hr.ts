@@ -81,6 +81,10 @@ const itemHr = {
     },
   },
   messages: {
+    queued: "Stavka {{name}} je stavljena u red za sinkronizaciju",
+    synchronized_one: "Sinkronizirana je {{count}} promjena na čekanju.",
+    synchronized_few: "Sinkronizirane su {{count}} promjene na čekanju.",
+    synchronized_other: "Sinkronizirano je {{count}} promjena na čekanju.",
     created: "Stavka {{name}} je kreirana",
     createFailed: "Stavku nije moguće kreirati.",
     updated: "Stavka {{name}} je ažurirana",

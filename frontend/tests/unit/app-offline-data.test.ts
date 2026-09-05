@@ -25,6 +25,7 @@ import { rebaseOfflineItemCommands } from "@/app/offline/services/app-offline-re
 import { sigCacheReadiness } from "@/app/offline/signals/sigCacheReadiness";
 import { sigConnectivityStatus } from "@/app/offline/signals/sigConnectivityStatus";
 import { sigOfflineSimulation } from "@/app/offline/signals/sigOfflineSimulation";
+import { sigSyncSummary } from "@/app/offline/signals/sigSyncSummary";
 import { appAxios } from "@/app/data/network/clients/AppAxiosClient";
 import { appOfflineItems, appOfflineQueue, appOfflineRuntime } from "@/app/offline/sqlite/app-offline-sqlite";
 import type { Item, ItemApi } from "@/features/item/public";
@@ -85,7 +86,7 @@ describe("offline Item data", () => {
     vi.stubGlobal("SharedArrayBuffer", undefined);
     const warmup = vi.spyOn(appOfflineRuntime, "warmup").mockRejectedValue(new Error("OPFS unavailable"));
     const list = vi.spyOn(appOfflineItems, "list");
-    const onlineDelete = vi.fn().mockResolvedValue(undefined);
+    const onlineDelete = vi.fn().mockResolvedValue({ persistence: "SAVED" as const, value: undefined });
 
     patchOfflineSimulation({ enabled: true, failNextReplay: false });
     await initializeOfflineData();
@@ -106,7 +107,7 @@ describe("offline Item data", () => {
   });
 
   it("routes mutations from the connectivity signal rather than the simulator flag", async () => {
-    const create = vi.fn(async (value: Item) => value);
+    const create = vi.fn(async (value: Item) => ({ persistence: "SAVED" as const, value }));
     patchOfflineSimulation({ enabled: true, failNextReplay: false });
     setConnectivityStatus(ConnectivityStatus.ONLINE);
 
@@ -145,7 +146,7 @@ describe("offline Item data", () => {
 
   it("queues create, update, and delete while preserving an optimistic local view", async () => {
     const api = new ItemApiOfflineCapable(unreachableApi);
-    const created = await api.create({
+    const createdResult = await api.create({
       id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       version: 0,
       name: "Offline draft",
@@ -153,8 +154,12 @@ describe("offline Item data", () => {
       quantity: 2,
       status: "DRAFT",
     });
+    expect(createdResult.persistence).toBe("QUEUED");
+    const created = createdResult.value;
 
-    const updated = await api.update(created.id, { ...created, name: "Offline update" });
+    const updatedResult = await api.update(created.id, { ...created, name: "Offline update" });
+    expect(updatedResult.persistence).toBe("QUEUED");
+    const updated = updatedResult.value;
     expect(updated.version).toBe(1);
     expect(await appOfflineQueue.getSize()).toBe(2);
     expect((await appOfflineItems.list()).find(item => item.id === updated.id)).toMatchObject({
@@ -162,7 +167,8 @@ describe("offline Item data", () => {
       pending: true,
     });
 
-    await api.delete(updated.id, updated.version);
+    const deleted = await api.delete(updated.id, updated.version);
+    expect(deleted.persistence).toBe("QUEUED");
 
     expect(await appOfflineQueue.getSize()).toBe(3);
     expect((await appOfflineItems.list()).find(item => item.id === updated.id)).toMatchObject({
@@ -234,10 +240,12 @@ describe("offline Item data", () => {
       );
     }
 
+    const previousSequence = sigSyncSummary.value.synchronizationSequence;
     await replayOfflineItems();
 
     expect(sentCommandIds).toHaveLength(2);
     expect(await appOfflineQueue.getSize()).toBe(2);
+    expect(sigSyncSummary.value.synchronizationSequence).toBe(previousSequence);
   });
 
   it("recovers the owner, queued commands, and authoritative snapshot under one lock", async () => {
@@ -278,11 +286,16 @@ describe("offline Item data", () => {
     patchOfflineSimulation({ enabled: false, failNextReplay: false });
     setConnectivityStatus(ConnectivityStatus.ONLINE);
 
+    const previousSequence = sigSyncSummary.value.synchronizationSequence;
     await recoverOfflineItems();
 
     expect(request).toHaveBeenCalledOnce();
     expect(await appOfflineQueue.getSize()).toBe(0);
     expect((await appOfflineItems.list()).find(candidate => candidate.id === id)).toMatchObject({ pending: false });
+    expect(sigSyncSummary.value).toMatchObject({
+      lastSynchronizedCount: 1,
+      synchronizationSequence: previousSequence + 1,
+    });
   });
 
   it("reissues a failed command with a fresh command ID before replaying it", async () => {

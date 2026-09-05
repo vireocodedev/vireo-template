@@ -125,29 +125,30 @@ class MockItemApi implements ItemApi {
     };
   }
 
-  async create(value: Item): Promise<Item> {
+  async create(value: Item) {
     if (this.items.some(item => item.id === value.id)) throw new Error(`Mock item ${value.id} already exists.`);
     const created = { ...value, version: 0 };
     this.items.push(created);
     this.persist();
-    return { ...created };
+    return { persistence: "SAVED" as const, value: { ...created } };
   }
 
-  async update(id: string, value: Item): Promise<Item> {
+  async update(id: string, value: Item) {
     const index = this.items.findIndex(item => item.id === id);
     if (index < 0) throw new Error(`Mock item ${id} does not exist.`);
     const updated = { ...value, id, version: this.items[index].version + 1 };
     this.items[index] = updated;
     this.persist();
-    return { ...updated };
+    return { persistence: "SAVED" as const, value: { ...updated } };
   }
 
-  async delete(id: string, version: number): Promise<void> {
+  async delete(id: string, version: number) {
     const item = this.items.find(candidate => candidate.id === id);
     if (!item) throw new Error(`Mock item ${id} does not exist.`);
     if (item.version !== version) throw new Error(`Mock item ${id} has changed.`);
     this.items = this.items.filter(item => item.id !== id);
     this.persist();
+    return { persistence: "SAVED" as const, value: undefined };
   }
 }
 

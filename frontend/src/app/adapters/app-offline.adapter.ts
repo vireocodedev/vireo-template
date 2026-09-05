@@ -458,6 +458,7 @@ async function applyReplayOutcomes(
 async function replayOfflineItemsUnlocked(): Promise<void> {
   patchSyncSummary({ error: null, status: SyncStatus.SYNCING });
   let retryIndex = 0;
+  let synchronizedCount = 0;
   for (;;) {
     if (sigConnectivityStatus.value !== ConnectivityStatus.ONLINE) {
       patchSyncSummary({ status: SyncStatus.IDLE });
@@ -502,6 +503,7 @@ async function replayOfflineItemsUnlocked(): Promise<void> {
     }
 
     const successful = results.filter(result => result.success).map(result => result.commandId);
+    synchronizedCount += successful.length;
     const permanent = results.filter(
       result => !result.success && (result.reason === "REJECTED" || result.reason === "RETRY_LIMIT_EXCEEDED"),
     );
@@ -535,7 +537,15 @@ async function replayOfflineItemsUnlocked(): Promise<void> {
     patchSyncSummary({ error: "Queued Item changes need attention.", status: SyncStatus.BLOCKED });
     return;
   }
-  patchSyncSummary({ error: null, status: SyncStatus.IDLE });
+  patchSyncSummary({
+    error: null,
+    lastSynchronizedCount: synchronizedCount,
+    status: SyncStatus.IDLE,
+    synchronizationSequence:
+      synchronizedCount > 0
+        ? sigSyncSummary.value.synchronizationSequence + 1
+        : sigSyncSummary.value.synchronizationSequence,
+  });
 }
 
 async function sendOfflineMaintenanceRequest(type: string): Promise<void> {
@@ -708,12 +718,13 @@ export class ItemApiOfflineCapable implements ItemApi {
     return this.online.search(pageable, filters);
   }
 
-  async create(value: Item): Promise<Item> {
+  async create(value: Item) {
     try {
       if (sigConnectivityStatus.value !== ConnectivityStatus.ONLINE) throw new Error("Offline simulation");
-      const created = await this.online.create(value);
-      if (canUseOfflineStorage()) await appOfflineItems.upsert(toCached(created)).catch(markOfflineStorageUnavailable);
-      return created;
+      const result = await this.online.create(value);
+      if (canUseOfflineStorage())
+        await appOfflineItems.upsert(toCached(result.value)).catch(markOfflineStorageUnavailable);
+      return result;
     } catch (error) {
       if (!canQueueOfflineMutation(error)) throw error;
       const local = toCached({ ...value, version: 0 }, true);
@@ -722,25 +733,26 @@ export class ItemApiOfflineCapable implements ItemApi {
         url: "/api/items",
         body: { ...value, version: 0 },
       });
-      return local;
+      return { persistence: "QUEUED" as const, value: local };
     }
   }
 
-  async update(id: string, value: Item): Promise<Item> {
+  async update(id: string, value: Item) {
     try {
       if (sigConnectivityStatus.value !== ConnectivityStatus.ONLINE) throw new Error("Offline simulation");
-      const updated = await this.online.update(id, value);
-      if (canUseOfflineStorage()) await appOfflineItems.upsert(toCached(updated)).catch(markOfflineStorageUnavailable);
-      return updated;
+      const result = await this.online.update(id, value);
+      if (canUseOfflineStorage())
+        await appOfflineItems.upsert(toCached(result.value)).catch(markOfflineStorageUnavailable);
+      return result;
     } catch (error) {
       if (!canQueueOfflineMutation(error)) throw error;
       const local = toCached({ ...value, id, version: value.version + 1 }, true);
       await applyQueuedItemMutation(local, id, { method: "PUT", url: `/api/items/${id}`, body: value });
-      return local;
+      return { persistence: "QUEUED" as const, value: local };
     }
   }
 
-  async delete(id: string, version: number): Promise<void> {
+  async delete(id: string, version: number) {
     let local: CachedItem | undefined;
     if (canUseOfflineStorage()) {
       try {
@@ -751,8 +763,9 @@ export class ItemApiOfflineCapable implements ItemApi {
     }
     try {
       if (sigConnectivityStatus.value !== ConnectivityStatus.ONLINE) throw new Error("Offline simulation");
-      await this.online.delete(id, version);
+      const result = await this.online.delete(id, version);
       if (canUseOfflineStorage()) await appOfflineItems.delete([id]).catch(markOfflineStorageUnavailable);
+      return result;
     } catch (error) {
       if (!canQueueOfflineMutation(error)) throw error;
       if (!local) throw new Error(`Cannot queue deletion for uncached Item ${id}.`, { cause: error });
@@ -761,6 +774,7 @@ export class ItemApiOfflineCapable implements ItemApi {
         url: `/api/items/${id}`,
         body: { version: local?.version ?? version },
       });
+      return { persistence: "QUEUED" as const, value: undefined };
     }
   }
 }

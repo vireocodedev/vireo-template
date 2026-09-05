@@ -1,5 +1,11 @@
 export { ItemFormOverlay, type ItemFormOverlayProps } from "./components/overlays/ItemFormOverlay";
-export type { ItemApi, ItemFilters, ItemRequestOptions } from "./api/item.api";
+export type {
+  ItemApi,
+  ItemFilters,
+  ItemMutationPersistence,
+  ItemMutationResult,
+  ItemRequestOptions,
+} from "./api/item.api";
 export { configureItemApi, ItemApiOnline } from "./api/item.api.online";
 export { ItemQuery } from "./api/item.query";
 export { ItemHistoryOverlay, type ItemHistoryOverlayProps } from "./components/overlays/ItemHistoryOverlay";

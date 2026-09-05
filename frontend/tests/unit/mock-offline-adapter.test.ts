@@ -54,7 +54,7 @@ describe("mock offline showcase transport", () => {
       { page: 0, rowsPerPage: 10, sortBy: "name", sortDirection: "asc" },
       { searchText: "Queued mock item", queryFilters: null },
     );
-    expect(page.content).toContainEqual(expect.objectContaining({ id: item.id }));
+    expect(page.content).toContainEqual(expect.objectContaining({ id: item.value.id }));
     expect(await appOfflineQueue.getSize()).toBe(0);
     expect(http).not.toHaveBeenCalled();
   });
@@ -74,8 +74,8 @@ describe("mock offline showcase transport", () => {
     await expect(appAuthApi.me()).resolves.toEqual({ username: "demo", role: "SUPERADMIN" });
     const page = await itemApi.search(
       { page: 0, rowsPerPage: 10, sortBy: "name", sortDirection: "asc" },
-      { searchText: first.name, queryFilters: null },
+      { searchText: first.value.name, queryFilters: null },
     );
-    expect(page.content).toEqual(expect.arrayContaining([expect.objectContaining({ id: first.id })]));
+    expect(page.content).toEqual(expect.arrayContaining([expect.objectContaining({ id: first.value.id })]));
   });
 });

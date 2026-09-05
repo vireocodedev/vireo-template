@@ -46,7 +46,8 @@ describe("application adapter composition", () => {
       quantity: 2,
       status: "DRAFT",
     });
-    expect(created.id).toMatch(/^00000000|^[0-9a-f]{8}-/u);
-    await expect(adapters.history.find(z.any() as never, "ITEM", created.id)).resolves.toEqual([]);
+    expect(created).toMatchObject({ persistence: "SAVED" });
+    expect(created.value.id).toMatch(/^00000000|^[0-9a-f]{8}-/u);
+    await expect(adapters.history.find(z.any() as never, "ITEM", created.value.id)).resolves.toEqual([]);
   });
 });

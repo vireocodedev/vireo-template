@@ -48,6 +48,7 @@ test("offline Item changes survive reload and replay in order", async ({ page },
   await page.getByRole("textbox", { name: "Name", exact: true }).fill(createdName);
   await page.getByRole("textbox", { name: "Quantity" }).fill("4");
   await page.getByRole("button", { name: "Create item" }).last().click();
+  await expect(page.getByText(`${createdName} queued for synchronization`)).toBeVisible();
   await page.reload();
   await expect(page.getByText(createdName, { exact: true })).toBeVisible();
   await expect(page.getByText("Pending", { exact: true })).toBeVisible();
@@ -62,6 +63,9 @@ test("offline Item changes survive reload and replay in order", async ({ page },
   }
   await page.getByRole("textbox", { name: "Name", exact: true }).fill(updatedName);
   await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText(`${updatedName} queued for synchronization`)).toBeVisible();
+  await search.fill(updatedName);
+  await search.press("Enter");
   await expect(page.getByText(updatedName, { exact: true }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Create item" }).first().click();
@@ -82,11 +86,13 @@ test("offline Item changes survive reload and replay in order", async ({ page },
       .click();
   }
   await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(page.getByText(`${deletedName} queued for synchronization`)).toBeVisible();
   await expect(page.getByText("No items match the current search and filters.")).toBeVisible();
 
   await page.goto("/settings#offline");
   await page.getByRole("switch", { name: "Offline simulator" }).uncheck();
   await expectConnectivity(page, testInfo.project.name, "Online");
+  await expect(page.getByText("4 queued changes synchronized.")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/0 pending · 0 failed/u)).toBeVisible({ timeout: 30_000 });
 
   await page.goto("/items");

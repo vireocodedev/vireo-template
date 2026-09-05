@@ -19,8 +19,10 @@ export enum CacheStatus {
 export type AppSyncSummary = Readonly<{
   error: string | null;
   failed: number;
+  lastSynchronizedCount: number;
   pending: number;
   status: SyncStatus;
+  synchronizationSequence: number;
 }>;
 
 export type AppCacheReadiness = Readonly<{
@@ -36,8 +38,10 @@ export type AppOfflineSimulation = Readonly<{
 export const DEFAULT_SYNC_SUMMARY: AppSyncSummary = Object.freeze({
   error: null,
   failed: 0,
+  lastSynchronizedCount: 0,
   pending: 0,
   status: SyncStatus.IDLE,
+  synchronizationSequence: 0,
 });
 export const DEFAULT_CACHE_READINESS: AppCacheReadiness = Object.freeze({
   error: null,

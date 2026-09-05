@@ -1,6 +1,7 @@
 import { ItemMutationKeys, ItemQueryKeys } from "../api/item.query";
 import { itemApi } from "../api/item.api.online";
 import type { Item } from "../models/Item";
+import type { ItemMutationResult } from "../api/item.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useVireoMutation } from "@vireocodedev/ui/tanstack-query";
 import { useItemTranslation } from "../localization/use-item-translation";
@@ -20,10 +21,11 @@ export function useItemUpdateMutation() {
   const { t } = useItemTranslation();
   const queryClient = useQueryClient();
 
-  return useVireoMutation<Item, Error, UpdateItemVariables, ItemSearchQuerySnapshot>({
+  return useVireoMutation<ItemMutationResult<Item>, Error, UpdateItemVariables, ItemSearchQuerySnapshot>({
     mutationKey: ItemMutationKeys.update,
     mutationFn: ({ id, value }: UpdateItemVariables) => itemApi.update(id, value),
-    successMessage: item => t("messages.updated", { name: item.name }),
+    successMessage: result =>
+      t(result.persistence === "QUEUED" ? "messages.queued" : "messages.updated", { name: result.value.name }),
     errorMessage: t("messages.updateFailed"),
     onMutate: async ({ id, value }) => {
       const snapshot = await snapshotItemSearchQueries(queryClient);
@@ -31,8 +33,8 @@ export function useItemUpdateMutation() {
       return snapshot;
     },
     onError: (_error, _variables, snapshot) => restoreItemSearchQueries(queryClient, snapshot),
-    onSuccess: item => {
-      replaceItemInSearchQueries(queryClient, item);
+    onSuccess: result => {
+      replaceItemInSearchQueries(queryClient, result.value);
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ItemQueryKeys.all });
