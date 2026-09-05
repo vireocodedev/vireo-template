@@ -155,6 +155,15 @@ describe("AppShellLayout", () => {
     });
 
     expect(navigationPropsSpy).toHaveBeenLastCalledWith(expect.objectContaining({ locked: false, resizable: true }));
+    expect(navigationPropsSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        slotProps: {
+          surface: {
+            slotProps: { paper: { sx: { bgcolor: "appSurface.content", borderColor: "divider" } } },
+          },
+        },
+      }),
+    );
     expect(container.querySelector("[data-app-navigation-header]")).toHaveStyle({
       height: "81px",
       maxHeight: "81px",

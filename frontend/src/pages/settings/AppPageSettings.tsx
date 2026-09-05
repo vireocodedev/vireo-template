@@ -44,6 +44,7 @@ const OFFLINE_ACTION_FAILURE_KEYS = {
   discard: "offline.action.discardFailed",
   reset: "offline.action.resetFailed",
 } as const;
+const SETTINGS_ACTION_SX = { minHeight: 48 } as const;
 
 export function AppPageSettings({
   offlineOperations = defaultOfflineOperations,
@@ -121,6 +122,7 @@ export function AppPageSettings({
               disabled={(sync.pending === 0 && sync.failed === 0) || offlineActionBusy}
               loading={offlineAction === "retry"}
               onClick={() => runOfflineAction("retry", offlineOperations.retry)}
+              sx={SETTINGS_ACTION_SX}
               variant="outlined"
             >
               {t("offline.retry")}
@@ -152,6 +154,7 @@ export function AppPageSettings({
               disabled={(sync.pending === 0 && sync.failed === 0) || offlineActionBusy}
               loading={offlineAction === "discard"}
               onClick={() => runOfflineAction("discard", offlineOperations.discard)}
+              sx={SETTINGS_ACTION_SX}
               variant="outlined"
             >
               {t("offline.discard.action")}
@@ -169,6 +172,7 @@ export function AppPageSettings({
               disabled={offlineActionBusy}
               loading={offlineAction === "reset"}
               onClick={() => runOfflineAction("reset", offlineOperations.reset)}
+              sx={SETTINGS_ACTION_SX}
               variant="outlined"
             >
               {t("offline.reset.action")}
@@ -318,7 +322,13 @@ export function AppPageSettings({
           title: t("reset.title"),
           description: t("reset.description"),
           control: (
-            <Button size="medium" variant="outlined" startIcon={<RestartAltRounded />} onClick={resetAppPreferences}>
+            <Button
+              size="medium"
+              variant="outlined"
+              startIcon={<RestartAltRounded />}
+              onClick={resetAppPreferences}
+              sx={SETTINGS_ACTION_SX}
+            >
               {t("reset.action")}
             </Button>
           ),

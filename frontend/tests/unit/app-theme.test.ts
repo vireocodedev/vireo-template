@@ -72,11 +72,10 @@ describe("application themes", () => {
     expect(APP_THEME_COMPONENTS?.MuiButton?.styleOverrides?.root).toBeDefined();
     expect(APP_THEME_COMPONENTS?.MuiIconButton?.styleOverrides?.root).toBeDefined();
     expect(APP_THEME_COMPONENTS?.MuiDialogActions?.styleOverrides?.root).toBeDefined();
-    expect(APP_THEME_COMPONENTS?.MuiTableBody?.styleOverrides?.root).toBeDefined();
+    expect(APP_THEME_COMPONENTS?.MuiTableRow?.styleOverrides?.root).toBeDefined();
     expect(APP_THEME_COMPONENTS?.MuiTableHead?.styleOverrides?.root).toBeDefined();
     expect(APP_THEME_COMPONENTS?.MuiOutlinedInput?.styleOverrides?.root).toBeDefined();
     expect(APP_THEME_COMPONENTS?.MuiMenuItem?.styleOverrides?.root).toBeDefined();
-    expect(APP_THEME_COMPONENTS?.VireoApplicationNavigation?.styleOverrides?.surface).toBeDefined();
     expect(APP_THEME_COMPONENTS?.VireoApplicationNavigationItem?.styleOverrides?.root).toBeDefined();
     expect(APP_THEME_COMPONENTS?.VireoMobileBottomNavigation?.styleOverrides?.root).toBeDefined();
     expect(APP_THEME_COMPONENTS?.VireoActionPreviewButton?.styleOverrides?.preview).toMatchObject({ opacity: 1 });
@@ -86,7 +85,6 @@ describe("application themes", () => {
     expect(APP_THEME_COMPONENTS?.VireoFormSection?.styleOverrides?.layout).toBeDefined();
     expect(APP_THEME_COMPONENTS?.VireoFormSection?.styleOverrides?.content).toBeDefined();
     expect(APP_THEME_COMPONENTS?.VireoPreferencePanel?.styleOverrides?.item).toBeDefined();
-    expect(APP_THEME_COMPONENTS?.VireoPreferencePanel?.styleOverrides?.itemControl).toBeDefined();
     expect(APP_THEME_COMPONENTS?.VireoResponsiveTable?.styleOverrides?.root).toBeDefined();
     expect(Object.keys(APP_THEME.components ?? {})).toEqual(
       expect.arrayContaining(["VireoOverlayHeader", "VireoPageHeader", "VireoPreferencePanel", "VireoResponsiveTable"]),
@@ -232,13 +230,13 @@ describe("application themes", () => {
   });
 
   it("shows a neutral background when hovering table rows", () => {
-    const tableBodyRoot = APP_THEME_COMPONENTS?.MuiTableBody?.styleOverrides?.root;
-    expect(typeof tableBodyRoot).toBe("function");
+    const tableRowRoot = APP_THEME_COMPONENTS?.MuiTableRow?.styleOverrides?.root;
+    expect(typeof tableRowRoot).toBe("function");
 
-    const styles = typeof tableBodyRoot === "function" ? tableBodyRoot({ theme: APP_THEME } as never) : tableBodyRoot;
+    const styles = typeof tableRowRoot === "function" ? tableRowRoot({ theme: APP_THEME } as never) : tableRowRoot;
 
     expect(styles).toMatchObject({
-      "& > .MuiTableRow-root.MuiTableRow-hover:hover": {
+      "&.MuiTableRow-hover:hover": {
         backgroundColor: `color-mix(in srgb, ${APP_THEME.palette.appSurface.elevated} 72%, ${APP_THEME.palette.appSurface.content})`,
       },
     });

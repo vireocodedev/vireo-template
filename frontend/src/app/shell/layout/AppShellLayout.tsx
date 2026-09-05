@@ -145,6 +145,13 @@ export function AppShellLayout() {
         resizable={desktop && !preferences.navigationLocked}
         onModeChange={commitNavigationMode}
         onExpandedWidthChange={commitNavigationWidth}
+        slotProps={{
+          surface: {
+            slotProps: {
+              paper: { sx: { bgcolor: "appSurface.content", borderColor: "divider" } },
+            },
+          },
+        }}
       >
         {({ mode, toggleMode }) => {
           const compact = mode === "compact";
