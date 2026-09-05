@@ -684,18 +684,12 @@ function AppPageItemsUrlState({ initialSearchParams }: { initialSearchParams: st
 }
 
 export function AppPageItems() {
-  const location = useLocation();
+  useLocation();
   const [historyRevision, setHistoryRevision] = React.useState(0);
   React.useEffect(() => {
     const refreshFromHistory = () => setHistoryRevision(current => current + 1);
     window.addEventListener("popstate", refreshFromHistory);
     return () => window.removeEventListener("popstate", refreshFromHistory);
   }, []);
-  const currentSearchParams = window.location.search.slice(1);
-  return (
-    <AppPageItemsUrlState
-      key={`${location.key}:${historyRevision}:${currentSearchParams}`}
-      initialSearchParams={currentSearchParams}
-    />
-  );
+  return <AppPageItemsUrlState key={historyRevision} initialSearchParams={window.location.search.slice(1)} />;
 }
