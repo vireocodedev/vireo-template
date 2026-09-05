@@ -29,6 +29,20 @@ describe("offline heartbeat", () => {
     expect(sigConnectivityStatus.value).toBe(ConnectivityStatus.OFFLINE);
   });
 
+  it("lets simulation force offline immediately but not declare the app online", () => {
+    recordAppHeartbeat(10_000);
+    expect(sigConnectivityStatus.value).toBe(ConnectivityStatus.ONLINE);
+
+    patchOfflineSimulation({ enabled: true });
+    expect(sigConnectivityStatus.value).toBe(ConnectivityStatus.OFFLINE);
+
+    patchOfflineSimulation({ enabled: false });
+    expect(sigConnectivityStatus.value).toBe(ConnectivityStatus.OFFLINE);
+
+    recordAppHeartbeat(10_001);
+    expect(sigConnectivityStatus.value).toBe(ConnectivityStatus.ONLINE);
+  });
+
   it("forgets heartbeat state at an authentication boundary", () => {
     recordAppHeartbeat(10_000);
 

@@ -20,6 +20,12 @@ function hydrateAfterBatch(): void {
     .catch(() => undefined);
 }
 
+function recoverAfterHeartbeat(): void {
+  void loadOfflineAdapter()
+    .then(({ recoverOfflineItems }) => recoverOfflineItems())
+    .catch(() => undefined);
+}
+
 const Heartbeat = z.object({ serverTime: z.string(), syncInProgress: z.boolean() });
 const Batch = z.object({
   batchId: z.string(),
@@ -41,6 +47,7 @@ export function AppOfflineProvider({ children }: React.PropsWithChildren) {
   const connectivity = sigConnectivityStatus.value;
   const previousConnectivity = React.useRef(connectivity);
   const lastAuthProbeAt = React.useRef(0);
+  const recoveryAfterOpenPending = React.useRef(false);
 
   React.useEffect(() => {
     if (user === null) return;
@@ -72,6 +79,10 @@ export function AppOfflineProvider({ children }: React.PropsWithChildren) {
       heartbeat: event => {
         Heartbeat.parse(JSON.parse(event.data));
         recordAppHeartbeat();
+        if (recoveryAfterOpenPending.current) {
+          recoveryAfterOpenPending.current = false;
+          recoverAfterHeartbeat();
+        }
       },
       batch: event => {
         Batch.parse(JSON.parse(event.data));
@@ -80,6 +91,9 @@ export function AppOfflineProvider({ children }: React.PropsWithChildren) {
     },
     onListenerError: () => {
       // An invalid event never advances heartbeat state or silently changes cached data.
+    },
+    onOpen: () => {
+      recoveryAfterOpenPending.current = true;
     },
     onError: () => {
       const now = Date.now();
@@ -104,6 +118,7 @@ export function AppOfflineProvider({ children }: React.PropsWithChildren) {
   }, [simulation.enabled, user]);
 
   React.useEffect(() => {
+    if (appConfig.apiMode !== "mock") return;
     const recovered =
       previousConnectivity.current === ConnectivityStatus.OFFLINE && connectivity === ConnectivityStatus.ONLINE;
     previousConnectivity.current = connectivity;

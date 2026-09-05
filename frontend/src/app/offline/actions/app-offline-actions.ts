@@ -2,8 +2,8 @@ import type {
   AppCacheReadiness,
   AppOfflineSimulation,
   AppSyncSummary,
-  ConnectivityStatus,
 } from "@/app/offline/models/AppOffline";
+import { ConnectivityStatus } from "@/app/offline/models/AppOffline";
 import { sigCacheReadiness } from "@/app/offline/signals/sigCacheReadiness";
 import { sigConnectivityStatus } from "@/app/offline/signals/sigConnectivityStatus";
 import { sigOfflineSimulation } from "@/app/offline/signals/sigOfflineSimulation";
@@ -23,4 +23,5 @@ export function patchCacheReadiness(next: Partial<AppCacheReadiness>): void {
 
 export function patchOfflineSimulation(next: Partial<AppOfflineSimulation>): void {
   sigOfflineSimulation.value = { ...sigOfflineSimulation.value, ...next };
+  if (next.enabled === true) setConnectivityStatus(ConnectivityStatus.OFFLINE);
 }

@@ -110,7 +110,8 @@ test("an open Item draft survives recovery while submission is disabled", async 
   await name.fill("Draft preserved across recovery");
 
   await page.evaluate(async () => {
-    const { patchOfflineSimulation } = await import("/src/app/offline/actions/app-offline-actions.ts");
+    const actionsUrl = "/src/app/offline/actions/app-offline-actions.ts";
+    const { patchOfflineSimulation } = await import(/* @vite-ignore */ actionsUrl);
     patchOfflineSimulation({ enabled: true });
   });
   await expect(page.getByText("Working offline.")).toBeVisible({ timeout: 20_000 });
@@ -126,7 +127,8 @@ test("an open Item draft survives recovery while submission is disabled", async 
     await route.continue();
   });
   await page.evaluate(async () => {
-    const { patchOfflineSimulation } = await import("/src/app/offline/actions/app-offline-actions.ts");
+    const actionsUrl = "/src/app/offline/actions/app-offline-actions.ts";
+    const { patchOfflineSimulation } = await import(/* @vite-ignore */ actionsUrl);
     patchOfflineSimulation({ enabled: false });
   });
 
@@ -137,4 +139,35 @@ test("an open Item draft survives recovery while submission is disabled", async 
   releaseHydration.resolve();
   await expect(save).toBeEnabled();
   await expect(name).toHaveValue("Draft preserved across recovery");
+});
+
+test("a short SSE reconnect repairs data without an offline status transition", async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+  await authenticateAsDevelopmentAdministrator(page);
+  await page.goto("/items");
+  await expectConnectivity(page, testInfo.project.name, "Online");
+
+  const hydrationStarted = deferred();
+  const releaseHydration = deferred();
+  let delayedHydration = false;
+  await page.route("**/api/items/search*", async route => {
+    if (delayedHydration || route.request().method() !== "POST") return route.continue();
+    delayedHydration = true;
+    hydrationStarted.resolve();
+    await releaseHydration.promise;
+    await route.continue();
+  });
+
+  await page.evaluate(async () => {
+    const signalUrl = "/src/app/offline/signals/sigOfflineSimulation.ts";
+    const { sigOfflineSimulation } = await import(/* @vite-ignore */ signalUrl);
+    sigOfflineSimulation.value = { ...sigOfflineSimulation.value, enabled: true };
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    sigOfflineSimulation.value = { ...sigOfflineSimulation.value, enabled: false };
+  });
+
+  await hydrationStarted.promise;
+  await expectConnectivity(page, testInfo.project.name, "Online");
+  releaseHydration.resolve();
+  await expect(page.getByRole("heading", { name: "Items" })).toBeVisible();
 });
