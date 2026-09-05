@@ -65,6 +65,8 @@ export function AppShellLayout() {
   const confirm = useVireoConfirmation();
   const connectivity = sigConnectivityStatus.value;
   const sync = sigSyncSummary.value;
+  const connectivityLabel = t(`offline.${connectivity}`);
+  const connectivityActionLabel = t("offline.OPEN_SETTINGS_WITH_STATUS", { status: connectivityLabel });
   const syncLabel =
     sync.failed > 0
       ? t("offline.FAILED", { count: sync.failed })
@@ -253,9 +255,9 @@ export function AppShellLayout() {
                 ))}
               </List>
               <Box sx={{ bgcolor: "appSurface.chrome", flexShrink: 0, px: compact ? 0.75 : 1.25, py: 1 }}>
-                <Tooltip title={t("offline.OPEN_SETTINGS")}>
+                <Tooltip title={connectivityActionLabel}>
                   <Button
-                    aria-label={t("offline.OPEN_SETTINGS")}
+                    aria-label={connectivityActionLabel}
                     color="inherit"
                     fullWidth
                     onClick={() => navigateTo(`${APP_PAGES.settings}#offline`)}
@@ -283,7 +285,7 @@ export function AppShellLayout() {
                       </Badge>
                     }
                   >
-                    {!compact && `${t(`offline.${connectivity}`)}${syncLabel ? ` · ${syncLabel}` : ""}`}
+                    {!compact && `${connectivityLabel}${syncLabel ? ` · ${syncLabel}` : ""}`}
                   </Button>
                 </Tooltip>
               </Box>

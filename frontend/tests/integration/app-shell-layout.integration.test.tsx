@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createTheme, ThemeProvider } from "@mui/material";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -131,6 +131,7 @@ function renderShell(preferenceOverrides: Partial<AppPreferences> = {}) {
           <Routes>
             <Route element={<AppShellLayout />}>
               <Route index element={<AppPageHeader title="Overview" description="Page description" />} />
+              <Route path="settings" element={<p>Offline settings page</p>} />
             </Route>
           </Routes>
         </MemoryRouter>
@@ -230,6 +231,23 @@ describe("AppShellLayout", () => {
     renderShell({ navigationLocked: false, navigationMode: "expanded" });
 
     expect(screen.getByText("Online")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Open offline settings" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Online. Open offline settings" })).toBeVisible();
+  });
+
+  it("announces changing connectivity and opens Settings from compact navigation", () => {
+    setDesktop(true);
+    renderShell({ navigationLocked: false, navigationMode: "compact" });
+
+    const offlineControl = screen.getByRole("button", { name: "Offline. Open offline settings" });
+    offlineControl.focus();
+    expect(offlineControl).toHaveFocus();
+
+    act(() => {
+      sigConnectivityStatus.value = ConnectivityStatus.ONLINE;
+    });
+    const onlineControl = screen.getByRole("button", { name: "Online. Open offline settings" });
+    fireEvent.click(onlineControl);
+
+    expect(screen.getByText("Offline settings page")).toBeVisible();
   });
 });

@@ -5,7 +5,7 @@ const en = {
     SYNCING: "Syncing",
     PENDING: "{{count}} pending",
     FAILED: "{{count}} failed",
-    OPEN_SETTINGS: "Open offline settings",
+    OPEN_SETTINGS_WITH_STATUS: "{{status}}. Open offline settings",
     CONNECTION_RESTORED: "Connection restored.",
     WORKING_OFFLINE: "Working offline.",
   },

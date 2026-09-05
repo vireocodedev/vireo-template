@@ -8,7 +8,7 @@ const hr = {
     SYNCING: "Sinkronizacija",
     PENDING: "{{count}} na čekanju",
     FAILED: "{{count}} neuspjelo",
-    OPEN_SETTINGS: "Otvori izvanmrežne postavke",
+    OPEN_SETTINGS_WITH_STATUS: "{{status}}. Otvori izvanmrežne postavke",
     CONNECTION_RESTORED: "Veza je ponovno uspostavljena.",
     WORKING_OFFLINE: "Rad izvan mreže.",
   },
