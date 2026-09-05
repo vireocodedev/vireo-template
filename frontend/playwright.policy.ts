@@ -4,7 +4,8 @@ export const parallelPlaywrightPolicy = {
   fullyParallel: true,
   retries: process.env.CI ? 1 : 0,
   timeout: 30_000,
-  workers: process.env.CI ? 2 : undefined,
+  // Browser contexts are isolated, but every journey mutates the same test backend.
+  workers: 1,
 } as const;
 
 export const serialPlaywrightPolicy = {
