@@ -36,7 +36,7 @@ describe("offline hydration coordinator", () => {
     expect(hydrate).toHaveBeenCalledTimes(2);
   });
 
-  it("serializes automatic and manual recovery jobs", async () => {
+  it("coalesces concurrent automatic recovery and preserves a trailing hydration", async () => {
     const firstWork = deferred();
     const hydrate = vi.fn().mockResolvedValue(undefined);
     const secondWork = vi.fn().mockResolvedValue(undefined);
@@ -49,7 +49,24 @@ describe("offline hydration coordinator", () => {
     firstWork.resolve();
     await Promise.all([firstRecovery, secondRecovery]);
 
-    expect(secondWork).toHaveBeenCalledOnce();
+    expect(secondWork).not.toHaveBeenCalled();
+    expect(hydrate).toHaveBeenCalledTimes(2);
+  });
+
+  it("serializes manual recovery after automatic recovery", async () => {
+    const firstWork = deferred();
+    const hydrate = vi.fn().mockResolvedValue(undefined);
+    const manualWork = vi.fn().mockResolvedValue(undefined);
+
+    const automaticRecovery = runOfflineRecovery(() => firstWork.promise, hydrate);
+    const manualRecovery = runOfflineRecovery(manualWork, hydrate, "manual");
+    await Promise.resolve();
+
+    expect(manualWork).not.toHaveBeenCalled();
+    firstWork.resolve();
+    await Promise.all([automaticRecovery, manualRecovery]);
+
+    expect(manualWork).toHaveBeenCalledOnce();
   });
 
   it("holds one origin-wide lock across replay and hydration", async () => {
@@ -78,7 +95,10 @@ describe("offline hydration coordinator", () => {
 
   it("exposes recovery as busy until replay and hydration finish", async () => {
     const replay = deferred();
-    const recovery = runOfflineRecovery(() => replay.promise, async () => undefined);
+    const recovery = runOfflineRecovery(
+      () => replay.promise,
+      async () => undefined,
+    );
 
     await vi.waitFor(() => expect(sigOfflineRecoveryInProgress.value).toBe(true));
     replay.resolve();

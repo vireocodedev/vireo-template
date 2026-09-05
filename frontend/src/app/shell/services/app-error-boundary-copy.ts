@@ -1,15 +1,8 @@
-import { APP_TRANSLATION_NAMESPACE } from "@/app/app.localization";
-import { appI18n } from "@/app/ui/localization/app-i18n";
+import { APP_TRANSLATION_NAMESPACE } from "../../app.localization";
+import { appI18n } from "../../ui/localization/app-i18n";
+import en from "../../ui/localization/resources/app.en";
 
-export const APP_ERROR_BOUNDARY_FALLBACK_COPY = {
-  heading: "Something went wrong",
-  message: "This page could not be displayed. Try again, or use one of the recovery actions below.",
-  actions: "Application recovery actions",
-  retry: "Try again",
-  home: "Go home",
-  reload: "Reload application",
-  signOut: "Sign out",
-} as const;
+export const APP_ERROR_BOUNDARY_FALLBACK_COPY = en.errorBoundary;
 
 type AppErrorBoundaryCopy = { [TKey in keyof typeof APP_ERROR_BOUNDARY_FALLBACK_COPY]: string };
 

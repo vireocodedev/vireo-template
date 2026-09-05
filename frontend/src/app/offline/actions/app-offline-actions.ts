@@ -1,13 +1,13 @@
-import type {
-  AppCacheReadiness,
-  AppOfflineSimulation,
-  AppSyncSummary,
-} from "@/app/offline/models/AppOffline";
-import { ConnectivityStatus } from "@/app/offline/models/AppOffline";
-import { sigCacheReadiness } from "@/app/offline/signals/sigCacheReadiness";
-import { sigConnectivityStatus } from "@/app/offline/signals/sigConnectivityStatus";
-import { sigOfflineSimulation } from "@/app/offline/signals/sigOfflineSimulation";
-import { sigSyncSummary } from "@/app/offline/signals/sigSyncSummary";
+import {
+  ConnectivityStatus,
+  type AppCacheReadiness,
+  type AppOfflineSimulation,
+  type AppSyncSummary,
+} from "../models/AppOffline";
+import { sigCacheReadiness } from "../signals/sigCacheReadiness";
+import { sigConnectivityStatus } from "../signals/sigConnectivityStatus";
+import { sigOfflineSimulation } from "../signals/sigOfflineSimulation";
+import { sigSyncSummary } from "../signals/sigSyncSummary";
 
 export function setConnectivityStatus(status: ConnectivityStatus): void {
   sigConnectivityStatus.value = status;

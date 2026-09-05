@@ -2,6 +2,12 @@ import { sigOfflineRecoveryInProgress } from "../signals/sigOfflineRecoveryInPro
 import { withAppOfflineLock } from "./app-offline-lock";
 
 type HydrateOfflineData = () => Promise<void>;
+type OfflineRecoveryKind = "automatic" | "manual";
+
+type AutomaticRecovery = {
+  promise: Promise<void>;
+  trailingHydrationRequested: boolean;
+};
 
 let activeHydration: Promise<void> | undefined;
 let hydrationRequested = false;
@@ -9,6 +15,7 @@ let recoveryInProgress = false;
 let recoveryBatchRequested = false;
 let recoveryQueue: Promise<void> = Promise.resolve();
 let pendingRecoveries = 0;
+let activeAutomaticRecovery: AutomaticRecovery | undefined;
 
 function runRequestedHydration(hydrate: HydrateOfflineData): Promise<void> {
   hydrationRequested = true;
@@ -31,7 +38,11 @@ export function requestOfflineHydration(hydrate: HydrateOfflineData): Promise<vo
   return runRequestedHydration(hydrate);
 }
 
-async function runExclusiveOfflineRecovery(work: () => Promise<void>, hydrate: HydrateOfflineData): Promise<void> {
+async function runExclusiveOfflineRecovery(
+  work: () => Promise<void>,
+  hydrate: HydrateOfflineData,
+  automaticRecovery?: AutomaticRecovery,
+): Promise<void> {
   recoveryInProgress = true;
   recoveryBatchRequested = false;
   try {
@@ -41,8 +52,9 @@ async function runExclusiveOfflineRecovery(work: () => Promise<void>, hydrate: H
       // Events emitted by the completed work are included in the following snapshot.
       recoveryBatchRequested = false;
       await runRequestedHydration(hydrate);
-      while (recoveryBatchRequested) {
+      while (recoveryBatchRequested || automaticRecovery?.trailingHydrationRequested) {
         recoveryBatchRequested = false;
+        if (automaticRecovery) automaticRecovery.trailingHydrationRequested = false;
         await runRequestedHydration(hydrate);
       }
     });
@@ -55,13 +67,30 @@ async function runExclusiveOfflineRecovery(work: () => Promise<void>, hydrate: H
   }
 }
 
-export function runOfflineRecovery(work: () => Promise<void>, hydrate: HydrateOfflineData): Promise<void> {
+export function runOfflineRecovery(
+  work: () => Promise<void>,
+  hydrate: HydrateOfflineData,
+  kind: OfflineRecoveryKind = "automatic",
+): Promise<void> {
+  if (kind === "automatic" && activeAutomaticRecovery) {
+    activeAutomaticRecovery.trailingHydrationRequested = true;
+    return activeAutomaticRecovery.promise;
+  }
+
+  const automaticRecovery: AutomaticRecovery | undefined =
+    kind === "automatic" ? { promise: Promise.resolve(), trailingHydrationRequested: false } : undefined;
   pendingRecoveries += 1;
   sigOfflineRecoveryInProgress.value = true;
-  const recovery = recoveryQueue.then(() => runExclusiveOfflineRecovery(work, hydrate));
+  const recovery = recoveryQueue.then(() => runExclusiveOfflineRecovery(work, hydrate, automaticRecovery));
   recoveryQueue = recovery.catch(() => undefined);
-  return recovery.finally(() => {
+  const trackedRecovery = recovery.finally(() => {
     pendingRecoveries -= 1;
     if (pendingRecoveries === 0) sigOfflineRecoveryInProgress.value = false;
+    if (activeAutomaticRecovery === automaticRecovery) activeAutomaticRecovery = undefined;
   });
+  if (automaticRecovery) {
+    automaticRecovery.promise = trackedRecovery;
+    activeAutomaticRecovery = automaticRecovery;
+  }
+  return trackedRecovery;
 }

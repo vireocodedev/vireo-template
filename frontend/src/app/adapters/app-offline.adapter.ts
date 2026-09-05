@@ -567,42 +567,46 @@ export async function retryOfflineChanges(): Promise<void> {
     return;
   }
   if (!(await ensureOfflineStorage())) return;
-  await runOfflineRecovery(async () => {
-    await validateLiveOfflineCurrentUserUnlocked();
-    const authoritativeItems = await fetchAuthoritativeItems();
-    const authoritativeVersions: AuthoritativeItemVersion[] = authoritativeItems.map(item => ({
-      id: item.id,
-      version: item.version,
-    }));
-    if (appOfflineRuntime.shouldUseInMemoryFallback()) {
-      const queued = [...queuedCommandsForInMemoryRetry.values()];
-      if (queued.length === 0 && sigSyncSummary.value.failed > 0) {
-        throw new Error("Failed offline commands cannot be retried after this tab's in-memory cache was reset.");
-      }
-      if (queued.length) {
-        const rebased = rebaseOfflineItemCommands(queued, authoritativeVersions);
-        await appOfflineQueue.delete(queued.map(command => command.commandId));
-        if (rebased.deletedItemIds.length) await appOfflineItems.delete(rebased.deletedItemIds);
-        for (const command of rebased.commands) {
-          const itemId = offlineItemIdFor(command);
-          const local = (await appOfflineItems.list()).find(item => item.id === itemId);
-          if (local) await appOfflineItems.upsert({ ...local, conflict: false, pending: true });
-          await appOfflineQueue.enqueue(command);
+  await runOfflineRecovery(
+    async () => {
+      await validateLiveOfflineCurrentUserUnlocked();
+      const authoritativeItems = await fetchAuthoritativeItems();
+      const authoritativeVersions: AuthoritativeItemVersion[] = authoritativeItems.map(item => ({
+        id: item.id,
+        version: item.version,
+      }));
+      if (appOfflineRuntime.shouldUseInMemoryFallback()) {
+        const queued = [...queuedCommandsForInMemoryRetry.values()];
+        if (queued.length === 0 && sigSyncSummary.value.failed > 0) {
+          throw new Error("Failed offline commands cannot be retried after this tab's in-memory cache was reset.");
         }
-        queuedCommandsForInMemoryRetry.clear();
-        for (const command of rebased.commands) queuedCommandsForInMemoryRetry.set(command.commandId, command);
-        failedCommandsForInMemoryRetry.clear();
+        if (queued.length) {
+          const rebased = rebaseOfflineItemCommands(queued, authoritativeVersions);
+          await appOfflineQueue.delete(queued.map(command => command.commandId));
+          if (rebased.deletedItemIds.length) await appOfflineItems.delete(rebased.deletedItemIds);
+          for (const command of rebased.commands) {
+            const itemId = offlineItemIdFor(command);
+            const local = (await appOfflineItems.list()).find(item => item.id === itemId);
+            if (local) await appOfflineItems.upsert({ ...local, conflict: false, pending: true });
+            await appOfflineQueue.enqueue(command);
+          }
+          queuedCommandsForInMemoryRetry.clear();
+          for (const command of rebased.commands) queuedCommandsForInMemoryRetry.set(command.commandId, command);
+          failedCommandsForInMemoryRetry.clear();
+        }
+      } else {
+        await appOfflineTransport.sendWorkerRequest({
+          type: "rebaseOfflineCommands",
+          authoritativeItems: authoritativeVersions,
+        });
       }
-    } else {
-      await appOfflineTransport.sendWorkerRequest({
-        type: "rebaseOfflineCommands",
-        authoritativeItems: authoritativeVersions,
-      });
-    }
-    patchSyncSummary({ error: null, status: SyncStatus.IDLE });
-    await refreshSyncSummary();
-    await replayOfflineItemsUnlocked();
-  }, hydrateOfflineItemsUnlocked);
+      patchSyncSummary({ error: null, status: SyncStatus.IDLE });
+      await refreshSyncSummary();
+      await replayOfflineItemsUnlocked();
+    },
+    hydrateOfflineItemsUnlocked,
+    "manual",
+  );
 }
 
 export async function discardOfflineChanges(): Promise<void> {

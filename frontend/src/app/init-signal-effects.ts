@@ -1,15 +1,15 @@
 import { effect } from "@preact/signals-react";
-import { patchOfflineSimulation } from "@/app/offline/actions/app-offline-actions";
-import { expireAppHeartbeat } from "@/app/offline/services/app-offline-heartbeat";
-import { sigConnectivityStatus } from "@/app/offline/signals/sigConnectivityStatus";
-import { sigOfflineSimulation } from "@/app/offline/signals/sigOfflineSimulation";
-import { sigSyncSummary } from "@/app/offline/signals/sigSyncSummary";
-import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
-import { ConnectivityStatus } from "@/app/offline/models/AppOffline";
-import { createAppPreferencesStorage } from "@/app/ui/preferences/services/app-preferences-storage";
+import { patchOfflineSimulation } from "./offline/actions/app-offline-actions";
+import { expireAppHeartbeat } from "./offline/services/app-offline-heartbeat";
+import { sigConnectivityStatus } from "./offline/signals/sigConnectivityStatus";
+import { sigOfflineSimulation } from "./offline/signals/sigOfflineSimulation";
+import { sigSyncSummary } from "./offline/signals/sigSyncSummary";
+import { sigAppPreferences } from "./ui/preferences/signals/sigAppPreferences";
+import { ConnectivityStatus } from "./offline/models/AppOffline";
+import { createAppPreferencesStorage } from "./ui/preferences/services/app-preferences-storage";
 import { toast } from "@vireocodedev/ui/sonner";
-import { appI18n } from "@/app/ui/localization/app-i18n";
-import { ITEM_TRANSLATION_NAMESPACE } from "@/app/app.localization";
+import { appI18n } from "./ui/localization/app-i18n";
+import { ITEM_TRANSLATION_NAMESPACE } from "./app.localization";
 
 let disposeSignalEffects: (() => void) | undefined;
 let heartbeatTimer: number | undefined;

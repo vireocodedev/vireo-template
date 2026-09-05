@@ -3,7 +3,7 @@ import {
   DEFAULT_ITEM_LIST_URL_STATE,
   parseItemListUrlState,
   serializeItemListUrlState,
-} from "@/pages/items/item-list-url-state";
+} from "@/pages/items/internal/item-list-url-state";
 
 const advancedFilters = {
   entity: "ITEM" as const,

@@ -18,8 +18,9 @@ export function useItemSearchQuery(pagination: PageableParams, filters: ItemFilt
     placeholderData: keepPreviousData,
   });
   const infinite = useInfiniteQuery({
-    ...ItemQuery.searchInfinite({ ...pagination, page: 0 }, filters),
+    ...ItemQuery.searchInfinite(pagination, filters),
     enabled: useMobileLayout,
+    initialPageParam: pagination.page,
     placeholderData: keepPreviousData,
   });
   const infiniteData = mergeItemSearchPages(infinite.data?.pages);

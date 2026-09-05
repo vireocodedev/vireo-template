@@ -44,4 +44,10 @@ test("an Item-list deep link survives reload and browser history", async ({ page
   await page.goForward();
   await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe("Thermal");
   await expect(search).toHaveValue("Thermal");
+
+  await page.goto("/items?q=Portable&page=1");
+  await expect(page.getByText("No items match the current search and filters.")).toBeVisible();
+  await page.reload();
+  await expect.poll(() => new URL(page.url()).searchParams.get("page")).toBe("1");
+  await expect(page.getByText("No items match the current search and filters.")).toBeVisible();
 });

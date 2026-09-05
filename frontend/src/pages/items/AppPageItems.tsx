@@ -58,7 +58,11 @@ import { CacheStatus, ConnectivityStatus, SyncStatus } from "@/app/offline/model
 import { sigOfflineRecoveryInProgress } from "@/app/offline/signals/sigOfflineRecoveryInProgress";
 import { APP_PAGES } from "@/app/app.pages";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
-import { parseItemListUrlState, serializeItemListUrlState, type ItemListUrlState } from "./item-list-url-state";
+import {
+  parseItemListUrlState,
+  serializeItemListUrlState,
+  type ItemListUrlState,
+} from "./internal/item-list-url-state";
 
 type ItemOverlayModes = {
   form: { item?: Item };

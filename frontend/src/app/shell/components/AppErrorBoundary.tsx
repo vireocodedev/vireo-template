@@ -1,6 +1,6 @@
 import React from "react";
-import { reportAppError } from "@/app/diagnostics/app-diagnostics";
-import { resolveAppErrorBoundaryCopy } from "@/app/shell/services/app-error-boundary-copy";
+import { reportAppError } from "../../diagnostics/app-diagnostics";
+import { resolveAppErrorBoundaryCopy } from "../services/app-error-boundary-copy";
 
 export type AppRenderErrorReport = {
   componentStack: string;

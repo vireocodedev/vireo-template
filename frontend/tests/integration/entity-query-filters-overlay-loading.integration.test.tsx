@@ -147,4 +147,16 @@ describe("Entity query-filter overlay loading-state contract", () => {
       }),
     );
   });
+
+  it("keeps rule validation errors in the Vireo TanStack form", async () => {
+    vi.mocked(useQuery).mockReturnValue(definitionState({ data: definition }) as never);
+    const onApply = vi.fn();
+    renderFilters(onApply);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(await screen.findByText("Enter a filter value.")).toBeVisible();
+    expect(onApply).not.toHaveBeenCalled();
+  });
 });

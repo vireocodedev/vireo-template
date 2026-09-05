@@ -42,8 +42,8 @@ export const OfflineMaintenanceError: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Reset cache" }));
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "The offline action could not be completed: Storage unavailable",
-    );
+    const alert = await canvas.findByRole("alert");
+    await expect(alert).toHaveTextContent("The local cache could not be reset. Reload the app and try again.");
+    await expect(alert).not.toHaveTextContent("Storage unavailable");
   },
 };

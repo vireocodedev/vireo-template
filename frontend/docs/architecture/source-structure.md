@@ -25,6 +25,7 @@ app/
 ├── config/
 ├── data/network/
 ├── data/query/
+├── diagnostics/             application-wide technical error reporting
 ├── shell/{components,contexts,hooks,layout,providers}/
 └── ui/{assets,forms,localization,preferences,theme}/
 ```

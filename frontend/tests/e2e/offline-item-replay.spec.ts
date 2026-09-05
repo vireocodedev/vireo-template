@@ -14,13 +14,71 @@ async function expectConnectivity(
   projectName: string,
   label: "Online" | "Offline",
 ) {
-  if (projectName === "mobile-chromium") await page.getByRole("button", { name: "Open navigation" }).click();
+  if (projectName === "mobile-chromium") {
+    await page.getByRole("button", { name: "Open navigation" }).focus();
+    await page.keyboard.press("Enter");
+  }
   await expect(page.getByRole("button", { name: "Open offline settings" })).toContainText(label);
   if (projectName === "mobile-chromium") {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: "Close navigation" })).not.toBeVisible();
   }
 }
+
+test("serializes offline recovery across two tabs", async ({ context, page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium", "One Chromium lane proves the origin-wide Web Lock.");
+  await authenticateAsDevelopmentAdministrator(page);
+  const secondPage = await context.newPage();
+  await secondPage.goto("/items");
+  await expect(secondPage.getByRole("heading", { name: "Items" })).toBeVisible();
+
+  const suffix = crypto.randomUUID();
+  const keys = {
+    firstState: `offline-lock:first:${suffix}`,
+    releaseFirst: `offline-lock:release:${suffix}`,
+    secondObserved: `offline-lock:second:${suffix}`,
+    secondFinished: `offline-lock:finished:${suffix}`,
+  };
+  await page.evaluate(async lockKeys => {
+    const recoveryUrl = "/src/app/offline/services/app-offline-hydration.ts";
+    const { runOfflineRecovery } = await import(/* @vite-ignore */ recoveryUrl);
+    void runOfflineRecovery(
+      async () => {
+        localStorage.setItem(lockKeys.firstState, "working");
+        await new Promise<void>(resolve => {
+          const waitForRelease = () => {
+            if (localStorage.getItem(lockKeys.releaseFirst) === "yes") resolve();
+            else window.setTimeout(waitForRelease, 10);
+          };
+          waitForRelease();
+        });
+        localStorage.setItem(lockKeys.firstState, "done");
+      },
+      async () => undefined,
+      "manual",
+    );
+  }, keys);
+  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), keys.firstState)).toBe("working");
+
+  const observedBeforeRelease = await secondPage.evaluate(async lockKeys => {
+    const recoveryUrl = "/src/app/offline/services/app-offline-hydration.ts";
+    const { runOfflineRecovery } = await import(/* @vite-ignore */ recoveryUrl);
+    void runOfflineRecovery(
+      async () => {
+        localStorage.setItem(lockKeys.secondObserved, localStorage.getItem(lockKeys.firstState) ?? "missing");
+      },
+      async () => undefined,
+      "manual",
+    ).then(() => localStorage.setItem(lockKeys.secondFinished, "yes"));
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    return localStorage.getItem(lockKeys.secondObserved);
+  }, keys);
+  expect(observedBeforeRelease).toBeNull();
+
+  await secondPage.evaluate(key => localStorage.setItem(key, "yes"), keys.releaseFirst);
+  await expect.poll(() => secondPage.evaluate(key => localStorage.getItem(key), keys.secondFinished)).toBe("yes");
+  expect(await secondPage.evaluate(key => localStorage.getItem(key), keys.secondObserved)).toBe("done");
+});
 
 test("offline Item changes survive reload and replay in order", async ({ page }, testInfo) => {
   test.setTimeout(90_000);
@@ -149,9 +207,24 @@ test("an open Item draft survives recovery while submission is disabled", async 
 
 test("a short SSE reconnect repairs data without an offline status transition", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
+  const missedItemName = `AAA missed during reconnect ${testInfo.project.name}-${Date.now()}`;
   await authenticateAsDevelopmentAdministrator(page);
   await page.goto("/items");
   await expectConnectivity(page, testInfo.project.name, "Online");
+  await page.evaluate(
+    () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const recoverySignalUrl = "/src/app/offline/signals/sigOfflineRecoveryInProgress.ts";
+        const cacheSignalUrl = "/src/app/offline/signals/sigCacheReadiness.ts";
+        const { sigOfflineRecoveryInProgress } = await import(/* @vite-ignore */ recoverySignalUrl);
+        const { sigCacheReadiness } = await import(/* @vite-ignore */ cacheSignalUrl);
+        return { cache: sigCacheReadiness.value.status, recovery: sigOfflineRecoveryInProgress.value };
+      }),
+    )
+    .toEqual({ cache: "READY", recovery: false });
 
   const hydrationStarted = deferred();
   const releaseHydration = deferred();
@@ -169,13 +242,39 @@ test("a short SSE reconnect repairs data without an offline status transition", 
     const { sigOfflineSimulation } = await import(/* @vite-ignore */ signalUrl);
     sigOfflineSimulation.value = { ...sigOfflineSimulation.value, enabled: true };
     await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+  const created = await page.evaluate(async name => {
+    const csrfToken = document.cookie
+      .split("; ")
+      .find(cookie => cookie.startsWith("XSRF-TOKEN="))
+      ?.slice("XSRF-TOKEN=".length);
+    const response = await fetch("/api/items", {
+      body: JSON.stringify({
+        id: crypto.randomUUID(),
+        version: 0,
+        name,
+        description: "Created while the realtime stream was unavailable.",
+        quantity: 1,
+        status: "ACTIVE",
+      }),
+      credentials: "include",
+      headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": decodeURIComponent(csrfToken ?? "") },
+      method: "POST",
+    });
+    return { body: await response.text(), ok: response.ok };
+  }, missedItemName);
+  expect(created.ok, created.body).toBe(true);
+  await page.evaluate(async () => {
+    const signalUrl = "/src/app/offline/signals/sigOfflineSimulation.ts";
+    const { sigOfflineSimulation } = await import(/* @vite-ignore */ signalUrl);
     sigOfflineSimulation.value = { ...sigOfflineSimulation.value, enabled: false };
   });
 
   await hydrationStarted.promise;
   await expectConnectivity(page, testInfo.project.name, "Online");
+  await expect(page.getByText(missedItemName, { exact: true })).not.toBeVisible();
   releaseHydration.resolve();
-  await expect(page.getByRole("heading", { name: "Items" })).toBeVisible();
+  await expect(page.getByText(missedItemName, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
 });
 
 test("a rejected offline deletion returns as an actionable conflict", async ({ page }, testInfo) => {
@@ -217,19 +316,22 @@ test("a rejected offline deletion returns as an actionable conflict", async ({ p
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.getByText("No items match the current search and filters.")).toBeVisible();
 
-  const changed = await page.evaluate(async value => {
-    const csrfToken = document.cookie
-      .split("; ")
-      .find(cookie => cookie.startsWith("XSRF-TOKEN="))
-      ?.slice("XSRF-TOKEN=".length);
-    const response = await fetch(`/api/items/${value.id}`, {
-      body: JSON.stringify(value),
-      credentials: "include",
-      headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": decodeURIComponent(csrfToken ?? "") },
-      method: "PUT",
-    });
-    return { body: await response.text(), ok: response.ok, status: response.status };
-  }, { ...item, description: "Changed on the server while deletion was queued" });
+  const changed = await page.evaluate(
+    async value => {
+      const csrfToken = document.cookie
+        .split("; ")
+        .find(cookie => cookie.startsWith("XSRF-TOKEN="))
+        ?.slice("XSRF-TOKEN=".length);
+      const response = await fetch(`/api/items/${value.id}`, {
+        body: JSON.stringify(value),
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": decodeURIComponent(csrfToken ?? "") },
+        method: "PUT",
+      });
+      return { body: await response.text(), ok: response.ok, status: response.status };
+    },
+    { ...item, description: "Changed on the server while deletion was queued" },
+  );
   expect(changed.ok, changed.body).toBe(true);
   await page.goto("/settings#offline");
   await page.getByRole("switch", { name: "Offline simulator" }).uncheck();
@@ -240,10 +342,20 @@ test("a rejected offline deletion returns as an actionable conflict", async ({ p
   await search.press("Enter");
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Conflict", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Conflict", { exact: true })).toBeVisible();
 
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button").filter({ hasText: name }).click();
   }
   await page.getByRole("button", { name: `Resolve sync conflict for ${name}` }).click();
   await expect(page).toHaveURL(/\/settings#offline$/u);
+  const discard = testInfo.project.name === "mobile-chromium";
+  await page.getByRole("button", { name: discard ? "Discard" : "Rebase and retry", exact: true }).click();
+  await expect(page.getByText(/0 pending · 0 failed/u)).toBeVisible({ timeout: 30_000 });
+
+  await page.goto(`/items?q=${encodeURIComponent(name)}`);
+  if (discard) await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+  else await expect(page.getByText("No items match the current search and filters.")).toBeVisible();
 });

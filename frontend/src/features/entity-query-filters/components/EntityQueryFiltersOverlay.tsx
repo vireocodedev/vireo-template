@@ -34,7 +34,10 @@ export type EntityQueryFiltersOverlayProps = {
   onExited?: () => void;
 };
 
-type EntityQueryFiltersOverlayContentProps = EntityQueryFiltersOverlayProps & {
+type EntityQueryFiltersOverlayContentProps = Pick<
+  EntityQueryFiltersOverlayProps,
+  "entityKey" | "title" | "open" | "value" | "onClear" | "onClose" | "onExited"
+> & {
   candidates: ReturnType<typeof createQueryFilterCandidates>;
   definitionAvailable: boolean;
   definitionError: boolean;
@@ -184,13 +187,16 @@ export function EntityQueryFiltersOverlay({
       definition.data ? createQueryFilterCandidates({ entityKey, definition: definition.data, presentation }) : [],
     [definition.data, entityKey, presentation],
   );
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
   const form = useVireoForm({
     defaultValues: { rules: [] as QueryFilterRuleDraft[] },
+    validators: {
+      onSubmit: ({ value: formValue }) => {
+        const { errors } = validateQueryFilterDraft(entityKey, formValue.rules, candidates, t);
+        return Object.keys(errors).length > 0 ? errors : undefined;
+      },
+    },
     onSubmit: ({ value: formValue }) => {
       const result = validateQueryFilterDraft(entityKey, formValue.rules, candidates, t);
-      setErrors(result.errors);
-      if (Object.keys(result.errors).length > 0) return;
       onApply(result.document);
       onClose();
     },
@@ -204,20 +210,23 @@ export function EntityQueryFiltersOverlay({
     if (!open || !definition.data || initializedToken.current === token) return;
     const next = queryFilterDocumentToDraft(value, candidates);
     form.reset({ rules: next });
-    setErrors({});
     initializedToken.current = token;
   }, [candidates, definition.data, form, open, token, value]);
 
   return (
-    <form.Subscribe selector={state => ({ dirty: state.isDirty, rules: state.values.rules })}>
+    <form.Subscribe
+      selector={state => ({
+        dirty: state.isDirty,
+        errors: (state.errorMap.onSubmit ?? {}) as Record<string, string>,
+        rules: state.values.rules,
+      })}
+    >
       {state => (
         <EntityQueryFiltersOverlayContent
           entityKey={entityKey}
           title={title}
           open={open}
           value={value}
-          presentation={presentation}
-          onApply={onApply}
           onClear={onClear}
           onClose={onClose}
           onExited={onExited}
@@ -225,11 +234,11 @@ export function EntityQueryFiltersOverlay({
           definitionAvailable={!!definition.data}
           definitionError={definition.isError}
           dirty={state.dirty}
-          errors={errors}
+          errors={state.errors}
           initialLoading={initialLoading}
           refreshing={refreshing}
           rules={state.rules}
-          onClearErrors={() => setErrors({})}
+          onClearErrors={() => form.setErrorMap({ onSubmit: undefined })}
           onRefetch={() => void definition.refetch()}
           onRulesChange={rules => form.setFieldValue("rules", rules)}
           onSubmit={() => void form.handleSubmit()}
