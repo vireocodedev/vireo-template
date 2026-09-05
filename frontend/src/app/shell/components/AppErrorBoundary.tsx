@@ -1,4 +1,6 @@
 import React from "react";
+import { reportAppError } from "@/app/diagnostics/app-diagnostics";
+import { resolveAppErrorBoundaryCopy } from "@/app/shell/services/app-error-boundary-copy";
 
 export type AppRenderErrorReport = {
   componentStack: string;
@@ -9,7 +11,10 @@ export type AppRenderErrorReport = {
 type AppRenderErrorReporter = (report: AppRenderErrorReport) => void;
 
 const defaultRenderErrorReporter: AppRenderErrorReporter = report => {
-  console.error("Unexpected application render failure.", report);
+  reportAppError("Unexpected application render failure.", report.error, {
+    componentStack: report.componentStack,
+    scope: report.scope,
+  });
 };
 
 type AppErrorBoundaryProps = React.PropsWithChildren<{
@@ -95,27 +100,28 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
     if (!this.state.failed) return this.props.children;
 
     const { onHome = goHome, onLogout, onReload = reloadApplication } = this.props;
+    const copy = resolveAppErrorBoundaryCopy();
 
     return (
       <main aria-labelledby="app-recovery-title" style={recoverySurfaceStyle}>
         <section style={recoveryCardStyle}>
           <h1 id="app-recovery-title" ref={this.headingRef} tabIndex={-1}>
-            Something went wrong
+            {copy.heading}
           </h1>
-          <p role="alert">This page could not be displayed. Try again, or use one of the recovery actions below.</p>
-          <div aria-label="Application recovery actions" role="group" style={actionsStyle}>
+          <p role="alert">{copy.message}</p>
+          <div aria-label={copy.actions} role="group" style={actionsStyle}>
             <button onClick={this.retry} style={buttonStyle} type="button">
-              Try again
+              {copy.retry}
             </button>
             <button onClick={onHome} style={buttonStyle} type="button">
-              Go home
+              {copy.home}
             </button>
             <button onClick={onReload} style={buttonStyle} type="button">
-              Reload application
+              {copy.reload}
             </button>
             {onLogout ? (
               <button onClick={onLogout} style={buttonStyle} type="button">
-                Sign out
+                {copy.signOut}
               </button>
             ) : null}
           </div>

@@ -9,6 +9,8 @@ const hr = {
     PENDING: "{{count}} na čekanju",
     FAILED: "{{count}} neuspjelo",
     OPEN_SETTINGS: "Otvori izvanmrežne postavke",
+    CONNECTION_RESTORED: "Veza je ponovno uspostavljena.",
+    WORKING_OFFLINE: "Rad izvan mreže.",
   },
   navigation: {
     PRIMARY: "Glavna navigacija",
@@ -42,6 +44,15 @@ const hr = {
   },
   actions: { BACK: "Natrag" },
   loading: { application: "Učitavanje aplikacije", page: "Učitavanje stranice" },
+  errorBoundary: {
+    heading: "Došlo je do pogreške",
+    message: "Ovu stranicu nije moguće prikazati. Pokušajte ponovno ili odaberite jednu od radnji za oporavak.",
+    actions: "Radnje za oporavak aplikacije",
+    retry: "Pokušaj ponovno",
+    home: "Idi na početnu stranicu",
+    reload: "Ponovno učitaj aplikaciju",
+    signOut: "Odjava",
+  },
   session: { expired: "Vaša je sesija istekla. Ponovno se prijavite." },
   pwa: {
     later: "Kasnije",

@@ -39,7 +39,9 @@ export function initSignalEffects(): void {
     const connectivity = sigConnectivityStatus.value;
     if (connectivity !== previousConnectivity) {
       toast[connectivity === ConnectivityStatus.ONLINE ? "success" : "warning"](
-        connectivity === ConnectivityStatus.ONLINE ? "Connection restored." : "Working offline.",
+        appI18n.t(
+          connectivity === ConnectivityStatus.ONLINE ? "offline.CONNECTION_RESTORED" : "offline.WORKING_OFFLINE",
+        ),
         { id: "app-connectivity-transition" },
       );
       previousConnectivity = connectivity;

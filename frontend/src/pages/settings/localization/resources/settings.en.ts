@@ -22,8 +22,9 @@ const en = {
     },
     retry: "Rebase and retry",
     action: {
-      failed: "The offline action could not be completed: {{message}}",
-      unknown: "Unknown error",
+      retryFailed: "Queued changes could not be retried. Check your connection and try again.",
+      discardFailed: "Local changes could not be discarded. Try again.",
+      resetFailed: "The local cache could not be reset. Reload the app and try again.",
     },
     discard: {
       title: "Keep server changes",

@@ -156,6 +156,7 @@ describe("busy action loading-state contract", () => {
   });
 
   it("permits one offline maintenance action and recovers after rejection", async () => {
+    const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const reset = deferred<void>();
     const resetOfflineCache = vi.fn(() => reset.promise);
 
@@ -181,7 +182,12 @@ describe("busy action loading-state contract", () => {
 
     await act(async () => reset.reject(new Error("Storage unavailable")));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The offline action could not be completed: Storage unavailable",
+      "The local cache could not be reset. Reload the app and try again.",
+    );
+    expect(screen.queryByText(/Storage unavailable/u)).not.toBeInTheDocument();
+    expect(diagnostic).toHaveBeenCalledWith(
+      "Offline Settings action failed.",
+      expect.objectContaining({ action: "reset", error: expect.any(Error) }),
     );
     await waitFor(() => expect(resetButton).toBeEnabled());
     expect(resetButton).toHaveAttribute("aria-busy", "false");

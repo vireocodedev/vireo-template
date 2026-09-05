@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { initSignalEffects } from "@/app/init-signal-effects";
 import { patchSyncSummary } from "@/app/offline/actions/app-offline-actions";
 import { DEFAULT_SYNC_SUMMARY } from "@/app/offline/models/AppOffline";
+import { ConnectivityStatus } from "@/app/offline/models/AppOffline";
+import { sigConnectivityStatus } from "@/app/offline/signals/sigConnectivityStatus";
 import { sigSyncSummary } from "@/app/offline/signals/sigSyncSummary";
 import { appI18n } from "@/app/ui/localization/app-i18n";
 
@@ -16,6 +18,7 @@ describe("application signal effects", () => {
     localStorage.clear();
     sessionStorage.clear();
     sigSyncSummary.value = DEFAULT_SYNC_SUMMARY;
+    sigConnectivityStatus.value = ConnectivityStatus.ONLINE;
     await appI18n.changeLanguage("en");
     initSignalEffects();
   });
@@ -26,5 +29,20 @@ describe("application signal effects", () => {
     });
 
     expect(toastMocks.success).toHaveBeenCalledWith("3 queued changes synchronized.");
+  });
+
+  it("localizes connectivity transitions in the active language", async () => {
+    act(() => {
+      sigConnectivityStatus.value = ConnectivityStatus.OFFLINE;
+    });
+    expect(toastMocks.warning).toHaveBeenCalledWith("Working offline.", { id: "app-connectivity-transition" });
+
+    await appI18n.changeLanguage("hr");
+    act(() => {
+      sigConnectivityStatus.value = ConnectivityStatus.ONLINE;
+    });
+    expect(toastMocks.success).toHaveBeenCalledWith("Veza je ponovno uspostavljena.", {
+      id: "app-connectivity-transition",
+    });
   });
 });

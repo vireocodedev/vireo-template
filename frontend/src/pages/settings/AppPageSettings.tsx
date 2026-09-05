@@ -25,6 +25,7 @@ import { sigSyncSummary } from "@/app/offline/signals/sigSyncSummary";
 import { patchOfflineSimulation } from "@/app/offline/actions/app-offline-actions";
 import { discardOfflineChanges, resetOfflineCache, retryOfflineChanges } from "@/app/adapters/app-offline.adapter";
 import { CacheStatus } from "@/app/offline/models/AppOffline";
+import { reportAppError } from "@/app/diagnostics/app-diagnostics";
 
 type AppPageSettingsOfflineOperations = Readonly<{
   discard: () => Promise<void>;
@@ -37,6 +38,12 @@ const defaultOfflineOperations: AppPageSettingsOfflineOperations = {
   reset: resetOfflineCache,
   retry: retryOfflineChanges,
 };
+
+const OFFLINE_ACTION_FAILURE_KEYS = {
+  retry: "offline.action.retryFailed",
+  discard: "offline.action.discardFailed",
+  reset: "offline.action.resetFailed",
+} as const;
 
 export function AppPageSettings({
   offlineOperations = defaultOfflineOperations,
@@ -52,7 +59,7 @@ export function AppPageSettings({
   const sync = sigSyncSummary.value;
   const [search, setSearch] = React.useState("");
   const [offlineAction, setOfflineAction] = React.useState<"retry" | "discard" | "reset" | null>(null);
-  const [offlineActionError, setOfflineActionError] = React.useState<string | null>(null);
+  const [offlineActionError, setOfflineActionError] = React.useState<NonNullable<typeof offlineAction> | null>(null);
   const offlineActionRef = React.useRef<typeof offlineAction>(null);
   const runOfflineAction = React.useCallback(
     (action: NonNullable<typeof offlineAction>, operation: () => Promise<void>) => {
@@ -61,13 +68,16 @@ export function AppPageSettings({
       setOfflineAction(action);
       setOfflineActionError(null);
       void operation()
-        .catch(error => setOfflineActionError(error instanceof Error ? error.message : t("offline.action.unknown")))
+        .catch(error => {
+          reportAppError("Offline Settings action failed.", error, { action });
+          setOfflineActionError(action);
+        })
         .finally(() => {
           offlineActionRef.current = null;
           setOfflineAction(null);
         });
     },
-    [t],
+    [],
   );
   const offlineActionBusy = offlineAction !== null;
   const sections: VireoPreferenceSectionDefinition[] = [
@@ -381,7 +391,7 @@ export function AppPageSettings({
           severity="error"
           sx={{ mx: 2, mt: 2 }}
         >
-          {t("offline.action.failed", { message: offlineActionError })}
+          {t(OFFLINE_ACTION_FAILURE_KEYS[offlineActionError])}
         </Alert>
       )}
       <VireoPreferencePanel

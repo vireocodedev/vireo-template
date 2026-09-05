@@ -24,8 +24,9 @@ const hr = {
     },
     retry: "Ponovno uskladi i pokušaj",
     action: {
-      failed: "Izvanmrežna radnja nije dovršena: {{message}}",
-      unknown: "Nepoznata pogreška",
+      retryFailed: "Promjene na čekanju nisu ponovno poslane. Provjerite vezu i pokušajte ponovno.",
+      discardFailed: "Lokalne promjene nisu odbačene. Pokušajte ponovno.",
+      resetFailed: "Lokalna predmemorija nije ponovno postavljena. Osvježite aplikaciju i pokušajte ponovno.",
     },
     discard: {
       title: "Zadrži promjene poslužitelja",

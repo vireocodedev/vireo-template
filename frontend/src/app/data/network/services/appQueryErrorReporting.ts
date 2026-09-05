@@ -1,5 +1,6 @@
 import type { Mutation, Query, QueryKey } from "@tanstack/react-query";
 import { z } from "zod";
+import { reportAppError } from "@/app/diagnostics/app-diagnostics";
 
 type ValidationFailureContext =
   { source: "query"; key: QueryKey } | { source: "mutation"; key: readonly unknown[] | undefined };
@@ -9,10 +10,9 @@ function reportContractValidationFailure(error: unknown, context: ValidationFail
     return;
   }
 
-  console.error("API response validation failed.", {
+  reportAppError("API response validation failed.", error, {
     ...context,
     issues: error.issues,
-    error,
   });
 }
 

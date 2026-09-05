@@ -6,6 +6,8 @@ const en = {
     PENDING: "{{count}} pending",
     FAILED: "{{count}} failed",
     OPEN_SETTINGS: "Open offline settings",
+    CONNECTION_RESTORED: "Connection restored.",
+    WORKING_OFFLINE: "Working offline.",
   },
   navigation: {
     PRIMARY: "Primary navigation",
@@ -39,6 +41,15 @@ const en = {
   },
   actions: { BACK: "Back" },
   loading: { application: "Loading application", page: "Loading page" },
+  errorBoundary: {
+    heading: "Something went wrong",
+    message: "This page could not be displayed. Try again, or use one of the recovery actions below.",
+    actions: "Application recovery actions",
+    retry: "Try again",
+    home: "Go home",
+    reload: "Reload application",
+    signOut: "Sign out",
+  },
   session: { expired: "Your session expired. Sign in again." },
   pwa: {
     later: "Later",
