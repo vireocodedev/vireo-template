@@ -58,6 +58,8 @@ import { sigCacheReadiness } from "@/app/offline/signals/sigCacheReadiness";
 import { sigSyncSummary } from "@/app/offline/signals/sigSyncSummary";
 import { CacheStatus, ConnectivityStatus, SyncStatus } from "@/app/offline/models/AppOffline";
 import { sigOfflineRecoveryInProgress } from "@/app/offline/signals/sigOfflineRecoveryInProgress";
+import { APP_PAGES } from "@/app/app.pages";
+import { useNavigate } from "react-router";
 
 type ItemOverlayModes = {
   form: { item?: Item };
@@ -95,6 +97,7 @@ type ItemListContentProps = {
   onOpenCreate: () => void;
   onOpenFilters: () => void;
   onOpenHistory: (item: Item) => void;
+  onResolveConflict?: (item: Item) => void;
   onRequestDelete: (item: Item) => Promise<void>;
 };
 
@@ -120,6 +123,7 @@ export const AppPageItemsListView = React.memo(function AppPageItemsListView({
   onOpenCreate,
   onOpenFilters,
   onOpenHistory,
+  onResolveConflict,
   onRequestDelete,
   result,
 }: AppPageItemsListViewProps) {
@@ -175,6 +179,7 @@ export const AppPageItemsListView = React.memo(function AppPageItemsListView({
             : "loaded";
   const columns = useItemTableColumns({
     onHistory: onOpenHistory,
+    onResolveConflict,
     historyDisabled: offline,
     onEdit: canManage ? onOpenEdit : undefined,
     onDelete: canManage ? onRequestDelete : undefined,
@@ -495,6 +500,7 @@ export function AppPageItemsFrame({
 export function AppPageItems() {
   const { t } = useTranslation(ITEMS_TRANSLATION_NAMESPACE);
   const { user } = useAppAuth();
+  const navigate = useNavigate();
   const preferences = sigAppPreferences.value;
   const canManage = user?.role === "SUPERADMIN";
   const canMutate =
@@ -567,6 +573,10 @@ export function AppPageItems() {
     [openOverlay],
   );
   const openHistory = React.useCallback((item: Item) => openOverlay("history", { item }), [openOverlay]);
+  const resolveConflict = React.useCallback(
+    () => void navigate(`${APP_PAGES.settings}#offline`),
+    [navigate],
+  );
   const openFilters = React.useCallback(() => openOverlay("filters", {}), [openOverlay]);
   const structuredFilterCount = countQueryFilterRules(queryFilters);
 
@@ -632,6 +642,7 @@ export function AppPageItems() {
         onOpenCreate={openCreate}
         onOpenFilters={openFilters}
         onOpenHistory={openHistory}
+        onResolveConflict={resolveConflict}
         onRequestDelete={requestDelete}
       />
       <PageOverlay

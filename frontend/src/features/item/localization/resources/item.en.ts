@@ -36,6 +36,8 @@ const itemEn = {
     noDescription: "No description",
     pending: "Pending",
     conflict: "Conflict",
+    resolveConflict: "Resolve synchronization conflict",
+    resolveConflictAria: "Resolve sync conflict for {{name}}",
     actions: "Actions",
     history: "Item history",
     historyOffline: "History is available when the app is online.",

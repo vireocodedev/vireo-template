@@ -1,5 +1,5 @@
 import type { Item } from "../models/Item";
-import { DeleteOutlined, EditOutlined, HistoryOutlined } from "@mui/icons-material";
+import { DeleteOutlined, EditOutlined, HistoryOutlined, SyncProblemOutlined } from "@mui/icons-material";
 import { Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import type { VireoResponsiveTableColumn } from "@vireocodedev/ui";
 import React from "react";
@@ -11,6 +11,7 @@ export type UseItemTableColumnsOptions = {
   onDelete?: (item: Item) => void | Promise<void>;
   onEdit?: (item: Item) => void;
   onHistory?: (item: Item) => void;
+  onResolveConflict?: (item: Item) => void;
   historyDisabled?: boolean;
 };
 
@@ -18,6 +19,7 @@ export function useItemTableColumns({
   onDelete,
   onEdit,
   onHistory,
+  onResolveConflict,
   historyDisabled = false,
 }: UseItemTableColumnsOptions): readonly VireoResponsiveTableColumn<Item>[] {
   const { t, i18n } = useItemTranslation();
@@ -70,6 +72,18 @@ export function useItemTableColumns({
         renderHeader: (): React.ReactNode => t("table.actions"),
         renderBody: (item: Item) => (
           <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
+            {(item as Item & { conflict?: boolean }).conflict && onResolveConflict ? (
+              <Tooltip title={t("table.resolveConflict")}>
+                <IconButton
+                  aria-label={t("table.resolveConflictAria", { name: item.name })}
+                  color="error"
+                  size="small"
+                  onClick={() => onResolveConflict(item)}
+                >
+                  <SyncProblemOutlined />
+                </IconButton>
+              </Tooltip>
+            ) : null}
             {onHistory && (
               <Tooltip title={historyDisabled ? t("table.historyOffline") : t("table.history")}>
                 <span>
@@ -107,6 +121,6 @@ export function useItemTableColumns({
         ),
       },
     ],
-    [historyDisabled, i18n.resolvedLanguage, onDelete, onEdit, onHistory, t],
+    [historyDisabled, i18n.resolvedLanguage, onDelete, onEdit, onHistory, onResolveConflict, t],
   );
 }

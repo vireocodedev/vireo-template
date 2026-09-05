@@ -450,6 +450,7 @@ async function applyReplayOutcomes(
     await appOfflineItems.upsert({
       ...item,
       conflict: outcome === "conflict",
+      deleted: outcome === "conflict" ? false : item.deleted,
       pending: outcome === "retry",
     });
   }

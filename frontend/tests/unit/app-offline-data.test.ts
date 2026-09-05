@@ -248,6 +248,55 @@ describe("offline Item data", () => {
     expect(sigSyncSummary.value.synchronizationSequence).toBe(previousSequence);
   });
 
+  it("restores a rejected queued deletion as a visible conflict", async () => {
+    const id = "00000000-0000-4000-8000-000000000521";
+    const item: Item = {
+      id,
+      version: 2,
+      name: "Server changed deletion",
+      description: "",
+      quantity: 1,
+      status: "ACTIVE",
+    };
+    await appOfflineItems.upsert({ ...item, pending: false, conflict: false, deleted: false });
+    const api = new ItemApiOfflineCapable(unreachableApi);
+    await api.delete(id, item.version);
+    configureOfflineShowcaseTransport({
+      currentUser: async () => ({
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        username: "admin",
+        role: "SUPERADMIN",
+        validatedAt: Date.now(),
+      }),
+      replay: async commands => ({
+        results: commands.map(command => ({
+          commandId: command.commandId,
+          success: false,
+          status: 409,
+          error: "The Item has changed on the server.",
+          reason: "REJECTED" as const,
+        })),
+      }),
+      searchItems: async () => ({ content: [item], number: 0, size: 100, totalElements: 1, totalPages: 1 }),
+    });
+    patchOfflineSimulation({ enabled: false, failNextReplay: false });
+    setConnectivityStatus(ConnectivityStatus.ONLINE);
+
+    await replayOfflineItems();
+
+    expect((await appOfflineItems.list()).find(candidate => candidate.id === id)).toMatchObject({
+      conflict: true,
+      deleted: false,
+      pending: false,
+    });
+    await expect(
+      api.search(
+        { page: 0, rowsPerPage: 10, sortBy: "name", sortDirection: "asc" },
+        { searchText: item.name, queryFilters: null },
+      ),
+    ).resolves.toMatchObject({ content: [expect.objectContaining({ id, name: item.name })] });
+  });
+
   it("recovers the owner, queued commands, and authoritative snapshot under one lock", async () => {
     const id = "00000000-0000-4000-8000-000000000520";
     const item: Item = {

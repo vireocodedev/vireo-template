@@ -39,6 +39,8 @@ const itemHr = {
     noDescription: "Nema opisa",
     pending: "Na čekanju",
     conflict: "Sukob",
+    resolveConflict: "Riješi sukob sinkronizacije",
+    resolveConflictAria: "Riješi sukob sinkronizacije za {{name}}",
     actions: "Radnje",
     history: "Povijest stavke",
     historyOffline: "Povijest je dostupna kada je aplikacija povezana.",

@@ -177,3 +177,73 @@ test("a short SSE reconnect repairs data without an offline status transition", 
   releaseHydration.resolve();
   await expect(page.getByRole("heading", { name: "Items" })).toBeVisible();
 });
+
+test("a rejected offline deletion returns as an actionable conflict", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const id = crypto.randomUUID();
+  const name = `Delete conflict ${testInfo.project.name}-${Date.now()}`;
+  const item = { id, version: 0, name, description: "Original server value", quantity: 1, status: "ACTIVE" };
+  await authenticateAsDevelopmentAdministrator(page);
+  const created = await page.evaluate(async value => {
+    const csrfToken = document.cookie
+      .split("; ")
+      .find(cookie => cookie.startsWith("XSRF-TOKEN="))
+      ?.slice("XSRF-TOKEN=".length);
+    const response = await fetch("/api/items", {
+      body: JSON.stringify(value),
+      credentials: "include",
+      headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": decodeURIComponent(csrfToken ?? "") },
+      method: "POST",
+    });
+    return { body: await response.text(), ok: response.ok, status: response.status };
+  }, item);
+  expect(created.ok, created.body).toBe(true);
+
+  await page.goto("/settings#offline");
+  await page.getByRole("switch", { name: "Offline simulator" }).check();
+  await expectConnectivity(page, testInfo.project.name, "Offline");
+  await page.goto("/items");
+  const search = page.getByRole("textbox", { name: "Search by name, description or status" });
+  await search.fill(name);
+  await search.press("Enter");
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button").filter({ hasText: name }).click();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+  } else {
+    await page.getByRole("row").filter({ hasText: name }).getByRole("button", { name: "Delete", exact: true }).click();
+  }
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(page.getByText("No items match the current search and filters.")).toBeVisible();
+
+  const changed = await page.evaluate(async value => {
+    const csrfToken = document.cookie
+      .split("; ")
+      .find(cookie => cookie.startsWith("XSRF-TOKEN="))
+      ?.slice("XSRF-TOKEN=".length);
+    const response = await fetch(`/api/items/${value.id}`, {
+      body: JSON.stringify(value),
+      credentials: "include",
+      headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": decodeURIComponent(csrfToken ?? "") },
+      method: "PUT",
+    });
+    return { body: await response.text(), ok: response.ok, status: response.status };
+  }, { ...item, description: "Changed on the server while deletion was queued" });
+  expect(changed.ok, changed.body).toBe(true);
+  await page.goto("/settings#offline");
+  await page.getByRole("switch", { name: "Offline simulator" }).uncheck();
+  await expect(page.getByText(/0 pending · 1 failed/u)).toBeVisible({ timeout: 30_000 });
+
+  await page.goto("/items");
+  await search.fill(name);
+  await search.press("Enter");
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Conflict", { exact: true })).toBeVisible();
+
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button").filter({ hasText: name }).click();
+  }
+  await page.getByRole("button", { name: `Resolve sync conflict for ${name}` }).click();
+  await expect(page).toHaveURL(/\/settings#offline$/u);
+});
