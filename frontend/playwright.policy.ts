@@ -4,8 +4,8 @@ export const parallelPlaywrightPolicy = {
   fullyParallel: true,
   retries: process.env.CI ? 1 : 0,
   timeout: 30_000,
-  // Bound local and CI concurrency to limit contention on the shared test backend.
-  workers: 2,
+  // Bound concurrency to limit contention; CI's multi-core runner needs one extra worker to stay inside its hard cap.
+  workers: process.env.CI ? 3 : 2,
 } as const;
 
 export const serialPlaywrightPolicy = {
