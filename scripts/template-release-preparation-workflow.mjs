@@ -72,9 +72,17 @@ export function parseTemplatePreparationWorkflowInput(options) {
 
 export function assertGeneratedReleasePaths(paths) {
   const actual = [...new Set(paths)].sort();
-  const expected = [...releasePreparationGeneratedPaths].sort();
-  if (actual.length !== expected.length || actual.some((path, index) => path !== expected[index]))
-    throw new Error(`release preparation must change exactly the managed release paths: expected ${expected.join(", ")}; received ${actual.join(", ")}`);
+  const expected = new Set(releasePreparationGeneratedPaths);
+  // A prior, necessary out-of-band dependency bump (e.g. landing a feature that
+  // required the new Starter version to compile before this release existed)
+  // can leave some managed paths already at their target value, so they show
+  // no diff here. Accept any non-empty subset of the managed set; reject only
+  // paths outside it, which would mean an unrelated file leaked into the PR.
+  const unexpected = actual.filter(path => !expected.has(path));
+  if (actual.length === 0 || unexpected.length > 0)
+    throw new Error(
+      `release preparation must change only the managed release paths: expected a non-empty subset of ${[...expected].sort().join(", ")}; received ${actual.join(", ")}`,
+    );
   return actual;
 }
 

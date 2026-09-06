@@ -42,10 +42,15 @@ test("accepts only strict canonical hosted release input", () => {
   assert.throws(() => inputFor({ release_version: "1.0.0" }), /strict 0.x semver/u);
 });
 
-test("accepts exactly the fixed release-owned write set", () => {
+test("accepts the fixed release-owned write set, or any non-empty subset of it", () => {
   assert.deepEqual(assertGeneratedReleasePaths([...releasePreparationGeneratedPaths].reverse()), [...releasePreparationGeneratedPaths].sort());
-  assert.throws(() => assertGeneratedReleasePaths(releasePreparationGeneratedPaths.slice(1)), /exactly the managed release paths/u);
-  assert.throws(() => assertGeneratedReleasePaths([...releasePreparationGeneratedPaths, "unrelated-file"]), /exactly the managed release paths/u);
+  assert.deepEqual(
+    assertGeneratedReleasePaths(releasePreparationGeneratedPaths.slice(1)),
+    [...releasePreparationGeneratedPaths.slice(1)].sort(),
+  );
+  assert.throws(() => assertGeneratedReleasePaths([]), /managed release paths/u);
+  assert.throws(() => assertGeneratedReleasePaths([...releasePreparationGeneratedPaths, "unrelated-file"]), /managed release paths/u);
+  assert.throws(() => assertGeneratedReleasePaths(["unrelated-file"]), /managed release paths/u);
 });
 
 test("fails closed for untracked output and exposes both sides of a rename before staging", () => {
@@ -63,7 +68,7 @@ test("fails closed for untracked output and exposes both sides of a rename befor
   assert.ok(calls[0].includes("--no-renames"));
   assert.deepEqual(calls[1], ["ls-files", "--others", "--exclude-standard", "-z"]);
   assert.deepEqual(paths, ["release-owned.txt", "renamed.txt", "unexpected-verification-output.json"]);
-  assert.throws(() => assertGeneratedReleasePaths(paths), /exactly the managed release paths/u);
+  assert.throws(() => assertGeneratedReleasePaths(paths), /managed release paths/u);
 });
 
 test("derives a deterministic marker and App-authored PR identity", () => {
