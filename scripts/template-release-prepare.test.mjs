@@ -77,7 +77,7 @@ test("requires strict coordinated versions and exactly seven unique npm coordina
 
 test("refuses downgrades, skipped successors, and same-version requests without exact prepared evidence", () => {
   assert.throws(() => createReleasePreparationPlan({ input: { ...input, templateVersion: "0.8.9", createVireoVersion: "0.8.9" }, artifacts }), /direct strict successor/);
-  assert.throws(() => createReleasePreparationPlan({ input: { ...input, templateVersion: "0.8.7", createVireoVersion: "0.8.7" }, artifacts }), /same-version/);
+  assert.throws(() => createReleasePreparationPlan({ input: { ...input, templateVersion: "0.9.0", createVireoVersion: "0.9.0" }, artifacts }), /same-version/);
 });
 
 test("refuses a self-consistent same-version artifact binding with tampered dependency coordinates", () => {
