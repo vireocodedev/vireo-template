@@ -48,12 +48,6 @@ export type QueryFilterDraftValidation = {
   errors: Record<string, string>;
 };
 
-export type EntityListState<TTableState> = {
-  searchText: string;
-  filters: QueryFilterDocument | null;
-  table: TTableState;
-};
-
 export type EntityQueryFilterContext = {
   entityKey: AppQueryEntityKey;
   definition: QueryEngineEntityDefinition;

@@ -2,6 +2,7 @@ import type { StorybookConfig } from "@storybook/react-vite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfigFromFile, mergeConfig } from "vite";
+import { signalsReactTransform } from "../config/signals-react-transform.ts";
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,6 +18,7 @@ const config: StorybookConfig = {
     const appResolve = loadedAppConfig?.config.resolve;
 
     return mergeConfig(viteConfig, {
+      plugins: [signalsReactTransform()],
       resolve: {
         ...appResolve,
         alias: [

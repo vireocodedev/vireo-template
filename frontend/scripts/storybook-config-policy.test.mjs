@@ -10,7 +10,11 @@ test("Storybook prebundles its public testing boundary for minimal story surface
   const config = loaded?.config;
 
   assert.ok(config, "Vitest Storybook configuration must load");
-  assert.deepEqual(config.optimizeDeps?.include, ["@testing-library/dom"]);
+  assert.deepEqual(config.optimizeDeps?.include, [
+    "@preact/signals-react/runtime",
+    "@testing-library/dom",
+    "@vireocodedev/sqlite",
+  ]);
 
   const projects = config.test?.projects;
   assert.ok(Array.isArray(projects), "Storybook browser projects must remain configured");

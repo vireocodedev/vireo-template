@@ -208,10 +208,6 @@ export function validateQueryFilterDraft(
   return { document: parsed.data.rows.length === 0 ? null : parsed.data, errors };
 }
 
-export function areQueryFilterDraftsEqual(left: QueryFilterRuleDraft[], right: QueryFilterRuleDraft[]): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
 export function formatQueryFilterRowSummary(
   row: QueryFilterRow,
   t: EntityQueryFiltersT,

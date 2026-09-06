@@ -46,7 +46,7 @@ test("rejects an older semver-compatible Vireo UI lock resolution", () => {
   assert.equal(result.compatible, false);
   assert.match(
     result.problems.join("\n"),
-    /resolves 0\.3\.0; expected 0\.3\.1/u,
+    /resolves 0\.3\.0; expected 0\.3\.2/u,
   );
 });
 

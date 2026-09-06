@@ -4,11 +4,12 @@ import { PageOverlay, PageOverlayControllerProvider } from "@vireocodedev/ui";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router";
 import { AppPageLayout } from "@/app/shell/layout/AppPageLayout";
-import { AppPreferencesContext } from "@/app/ui/preferences/contexts/AppPreferencesContext";
 import { DEFAULT_APP_PREFERENCES } from "@/app/ui/preferences/models/AppPreferences";
+import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 
 describe("AppPageLayout", () => {
   beforeEach(() => {
+    sigAppPreferences.value = DEFAULT_APP_PREFERENCES;
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: vi.fn().mockImplementation(() => ({
@@ -25,23 +26,16 @@ describe("AppPageLayout", () => {
   });
 
   it("places a docked page overlay in the page body's drawer sibling", async () => {
+    sigAppPreferences.value = { ...DEFAULT_APP_PREFERENCES, desktopSurface: "dockedSidePanel" };
     render(
       <ThemeProvider theme={createTheme()}>
         <MemoryRouter>
-          <AppPreferencesContext.Provider
-            value={{
-              preferences: { ...DEFAULT_APP_PREFERENCES, desktopSurface: "dockedSidePanel" },
-              updatePreference: vi.fn(),
-              resetPreferences: vi.fn(),
-            }}
-          >
-            <PageOverlayControllerProvider>
-              <AppPageLayout>
-                <div>Workspace</div>
-                <PageOverlay open onRequestClose={vi.fn()} render={<div data-testid="docked-overlay">Editor</div>} />
-              </AppPageLayout>
-            </PageOverlayControllerProvider>
-          </AppPreferencesContext.Provider>
+          <PageOverlayControllerProvider>
+            <AppPageLayout>
+              <div>Workspace</div>
+              <PageOverlay open onRequestClose={vi.fn()} render={<div data-testid="docked-overlay">Editor</div>} />
+            </AppPageLayout>
+          </PageOverlayControllerProvider>
         </MemoryRouter>
       </ThemeProvider>,
     );
@@ -73,16 +67,12 @@ describe("AppPageLayout", () => {
     const view = render(
       <ThemeProvider theme={createTheme()}>
         <MemoryRouter initialEntries={["/first"]}>
-          <AppPreferencesContext.Provider
-            value={{ preferences: DEFAULT_APP_PREFERENCES, updatePreference: vi.fn(), resetPreferences: vi.fn() }}
-          >
-            <PageOverlayControllerProvider>
-              <Routes>
-                <Route path="/first" element={<FirstPage />} />
-                <Route path="/second" element={<SecondPage />} />
-              </Routes>
-            </PageOverlayControllerProvider>
-          </AppPreferencesContext.Provider>
+          <PageOverlayControllerProvider>
+            <Routes>
+              <Route path="/first" element={<FirstPage />} />
+              <Route path="/second" element={<SecondPage />} />
+            </Routes>
+          </PageOverlayControllerProvider>
         </MemoryRouter>
       </ThemeProvider>,
     );

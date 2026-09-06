@@ -1,12 +1,10 @@
 import { DEFAULT_APP_PREFERENCES } from "@/app/ui/preferences/models/AppPreferences";
-import { AppPreferencesProvider } from "@/app/ui/preferences/providers/AppPreferencesProvider";
+import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 import { AppThemeProvider } from "@/app/ui/theme/AppThemeProvider";
 import { Alert, alertClasses } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-
-const PREFERENCES_STORAGE_KEY = "starter-template:preferences";
 
 function ThemeProbe() {
   const theme = useTheme();
@@ -18,23 +16,16 @@ function ThemeProbe() {
 describe("AppThemeProvider", () => {
   beforeEach(() => {
     localStorage.clear();
+    sigAppPreferences.value = DEFAULT_APP_PREFERENCES;
   });
 
   it("exposes the selected dark scheme through the active MUI palette", () => {
-    localStorage.setItem(
-      PREFERENCES_STORAGE_KEY,
-      JSON.stringify({
-        ...DEFAULT_APP_PREFERENCES,
-        darkMode: true,
-      }),
-    );
+    sigAppPreferences.value = { ...DEFAULT_APP_PREFERENCES, darkMode: true };
 
     render(
-      <AppPreferencesProvider>
-        <AppThemeProvider>
-          <ThemeProbe />
-        </AppThemeProvider>
-      </AppPreferencesProvider>,
+      <AppThemeProvider>
+        <ThemeProbe />
+      </AppThemeProvider>,
     );
 
     expect(screen.getByTestId("theme")).toHaveAttribute("data-mode", "dark");
@@ -44,11 +35,9 @@ describe("AppThemeProvider", () => {
 
   it("renders light standard info alerts with the classes targeted by the contrast override", () => {
     render(
-      <AppPreferencesProvider>
-        <AppThemeProvider>
-          <Alert severity="info">Information</Alert>
-        </AppThemeProvider>
-      </AppPreferencesProvider>,
+      <AppThemeProvider>
+        <Alert severity="info">Information</Alert>
+      </AppThemeProvider>,
     );
 
     expect(screen.getByRole("alert")).toHaveClass(alertClasses.standard, alertClasses.colorInfo);

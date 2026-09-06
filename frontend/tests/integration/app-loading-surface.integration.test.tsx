@@ -1,8 +1,8 @@
 import { APP_PAGE_REGISTRY, type AppRouteLoadingPolicy } from "@/app/app.pages";
 import { AppRouteFallback } from "@/app/shell/components/AppLoadingSurface";
 import { AppShellNavigationContext } from "@/app/shell/contexts/AppShellNavigationContext";
-import { AppPreferencesContext } from "@/app/ui/preferences/contexts/AppPreferencesContext";
 import { DEFAULT_APP_PREFERENCES } from "@/app/ui/preferences/models/AppPreferences";
+import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 import { createTheme, ThemeProvider } from "@mui/material";
 import { PageOverlayControllerProvider } from "@vireocodedev/ui";
 import { render, screen } from "@testing-library/react";
@@ -10,21 +10,14 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 function renderFallback(loading: AppRouteLoadingPolicy, pageWidth: "md" | "lg" | "xl" | "full" = "md") {
+  sigAppPreferences.value = { ...DEFAULT_APP_PREFERENCES, pageWidth };
   return render(
     <ThemeProvider theme={createTheme()}>
       <MemoryRouter>
         <AppShellNavigationContext.Provider value={{ mobile: false, openNavigation: vi.fn() }}>
-          <AppPreferencesContext.Provider
-            value={{
-              preferences: { ...DEFAULT_APP_PREFERENCES, pageWidth },
-              resetPreferences: vi.fn(),
-              updatePreference: vi.fn(),
-            }}
-          >
-            <PageOverlayControllerProvider>
-              <AppRouteFallback loading={loading} />
-            </PageOverlayControllerProvider>
-          </AppPreferencesContext.Provider>
+          <PageOverlayControllerProvider>
+            <AppRouteFallback loading={loading} />
+          </PageOverlayControllerProvider>
         </AppShellNavigationContext.Provider>
       </MemoryRouter>
     </ThemeProvider>,

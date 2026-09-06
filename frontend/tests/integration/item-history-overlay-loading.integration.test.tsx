@@ -21,13 +21,20 @@ beforeAll(() => {
 
 afterAll(() => vi.unstubAllGlobals());
 
-const item: Item = { id: 42, name: "Starter audit", description: "", quantity: 2, status: "ACTIVE" };
+const item: Item = {
+  id: "00000000-0000-4000-8000-000000000103",
+  version: 0,
+  name: "Starter audit",
+  description: "",
+  quantity: 2,
+  status: "ACTIVE",
+};
 const record = ItemHistoryRecordSchema.parse({
   id: "3d16bc25-0fde-44a6-91fd-e84a3f64323d",
   timestamp: "2026-08-24T18:30:00Z",
   actor: { id: "admin", label: "Admin" },
   entity: "ITEM",
-  entityId: "42",
+  entityId: item.id,
   snapshotPrevious: { ...item, description: null, quantity: 1, status: "DRAFT" },
   snapshotCurrent: item,
 });

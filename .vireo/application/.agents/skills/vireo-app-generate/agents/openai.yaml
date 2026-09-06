@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vireo App Generate"
+  short_description: "Generate supported capabilities with ownership checks"
+  default_prompt: "Use $vireo-app-generate to inspect this application's pinned generator and review a supported capability dry-run before writing."

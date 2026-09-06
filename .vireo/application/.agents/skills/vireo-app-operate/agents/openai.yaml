@@ -1,0 +1,6 @@
+interface:
+  display_name: "Vireo App Operate"
+  short_description: "Plan operations and gate deployment or recovery"
+  default_prompt: "Use $vireo-app-operate to assess readiness and plan this operation, requiring exact target, artifact, effects, and recovery authorization before execution."
+policy:
+  allow_implicit_invocation: false

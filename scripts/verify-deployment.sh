@@ -101,4 +101,4 @@ fi
     corepack npm exec -- playwright test --config=playwright.deployment.config.ts
 )
 
-printf 'Production-like deployment smoke passed: built browser application, authenticated persisted CRUD, security headers, API proxy, backend readiness, PostgreSQL health, and separated database privileges.\n'
+printf 'Production-like deployment smoke passed: built browser application, authenticated persisted CRUD and incremental SSE heartbeats, security headers, API proxy, backend readiness, PostgreSQL health, and separated database privileges.\n'

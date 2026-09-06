@@ -10,18 +10,53 @@ import {
   APP_TRANSLATION_NAMESPACES,
 } from "@/app/app.localization";
 import { APP_LOCALES, type AppLocale } from "@/app/ui/localization/app-locales";
-import { AppPreferencesContext } from "@/app/ui/preferences/contexts/AppPreferencesContext";
 import { DEFAULT_APP_PREFERENCES, type AppPreferences } from "@/app/ui/preferences/models/AppPreferences";
+import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 import { measureUnexpectedLayoutShift } from "@/app/storybook/loadingGeometry";
 import type { Item } from "@/features/item/public";
 import { AppPageHomeView } from "../AppPageHomeView";
 
 const overviewItems: Item[] = [
-  { id: 1, name: "Portable barcode scanners", description: "Receiving and dispatch", quantity: 18, status: "ACTIVE" },
-  { id: 2, name: "Thermal label rolls", description: "Packing stations", quantity: 4, status: "ACTIVE" },
-  { id: 3, name: "Safety inspection kits", description: "Awaiting approval", quantity: 2, status: "DRAFT" },
-  { id: 4, name: "Rugged field tablets", description: "Warehouse leads", quantity: 11, status: "ACTIVE" },
-  { id: 5, name: "Legacy handheld terminals", description: "Audit history", quantity: 0, status: "ARCHIVED" },
+  {
+    id: "00000000-0000-4000-8000-000000000011",
+    version: 0,
+    name: "Portable barcode scanners",
+    description: "Receiving and dispatch",
+    quantity: 18,
+    status: "ACTIVE",
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000012",
+    version: 0,
+    name: "Thermal label rolls",
+    description: "Packing stations",
+    quantity: 4,
+    status: "ACTIVE",
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000013",
+    version: 0,
+    name: "Safety inspection kits",
+    description: "Awaiting approval",
+    quantity: 2,
+    status: "DRAFT",
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000014",
+    version: 0,
+    name: "Rugged field tablets",
+    description: "Warehouse leads",
+    quantity: 11,
+    status: "ACTIVE",
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000015",
+    version: 0,
+    name: "Legacy handheld terminals",
+    description: "Audit history",
+    quantity: 0,
+    status: "ARCHIVED",
+  },
 ];
 
 const meta = {
@@ -89,14 +124,13 @@ type OverviewScenarioProps = {
 };
 
 function OverviewScenario({ darkMode, loading, locale, pageWidth }: OverviewScenarioProps) {
-  const preferences = React.useMemo(
-    () => ({
-      preferences: { ...DEFAULT_APP_PREFERENCES, darkMode, locale, pageWidth },
-      resetPreferences: () => undefined,
-      updatePreference: () => undefined,
-    }),
-    [darkMode, locale, pageWidth],
-  );
+  React.useLayoutEffect(() => {
+    const previous = sigAppPreferences.value;
+    sigAppPreferences.value = { ...DEFAULT_APP_PREFERENCES, darkMode, locale, pageWidth };
+    return () => {
+      sigAppPreferences.value = previous;
+    };
+  }, [darkMode, locale, pageWidth]);
 
   return (
     <Box
@@ -106,9 +140,7 @@ function OverviewScenario({ darkMode, loading, locale, pageWidth }: OverviewScen
       sx={{ display: "contents" }}
     >
       <I18nextProvider i18n={storyI18n[locale]}>
-        <AppPreferencesContext.Provider value={preferences}>
-          <AppPageHomeView items={overviewItems} loading={loading} onOpenItems={() => undefined} />
-        </AppPreferencesContext.Provider>
+        <AppPageHomeView items={overviewItems} loading={loading} onOpenItems={() => undefined} />
       </I18nextProvider>
     </Box>
   );

@@ -7,28 +7,88 @@ import { type AppAuthFailure, toAppAuthFailureError } from "@/app/data/network/m
 import type { AuthUser } from "@/app/data/network/models/AuthUser";
 import { AppAuthFailureAlert } from "@/app/shell/components/AppAuthFailureAlert";
 import { AppAuthContext, type AppAuthContextValue } from "../contexts/AppAuthContext";
+import { appConfig } from "@/app/config/app-config";
+import { resetAppHeartbeat } from "@/app/offline/services/app-offline-heartbeat";
+
+const loadOfflineAdapter = () => import("@/app/adapters/app-offline.adapter");
+
+async function prepareAuthenticatedOfflineCapability(queryClient: ReturnType<typeof useQueryClient>): Promise<void> {
+  try {
+    const offlineAdapter = await loadOfflineAdapter();
+    await offlineAdapter.validateLiveOfflineCurrentUser();
+    offlineAdapter.installOfflineItemAdapter();
+  } catch (error) {
+    queryClient.clear();
+    try {
+      (await loadOfflineAdapter()).markOfflineCacheUnavailable(error);
+    } catch {
+      // Offline support is optional while the authenticated online session remains usable.
+    }
+  }
+}
+
+async function loadCachedOfflineUser(): Promise<AuthUser | null> {
+  try {
+    const offlineAdapter = await loadOfflineAdapter();
+    offlineAdapter.installOfflineItemAdapter();
+    const cachedUser = await offlineAdapter.validateOfflineCurrentUser();
+    return cachedUser ? { username: cachedUser.username, role: cachedUser.role } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function clearOfflineCapability(purgeData: boolean): Promise<void> {
+  try {
+    const offlineAdapter = await loadOfflineAdapter();
+    if (purgeData) {
+      try {
+        await offlineAdapter.purgeOfflineData();
+      } catch (error) {
+        offlineAdapter.markOfflineCacheUnavailable(error);
+      }
+    }
+    offlineAdapter.clearOfflineCurrentUser();
+  } catch {
+    // Offline support must not turn a successful server logout into a failure.
+  }
+}
 
 export function AppAuthProvider({ children }: React.PropsWithChildren) {
   const queryClient = useQueryClient();
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [failure, setFailure] = React.useState<AppAuthFailure | null>(null);
+  const userIdentity = React.useRef<string | null>(null);
+  const setAuthenticatedUser = React.useCallback((nextUser: AuthUser | null) => {
+    const nextIdentity = nextUser?.username ?? null;
+    if (nextIdentity !== userIdentity.current) resetAppHeartbeat();
+    userIdentity.current = nextIdentity;
+    setUser(nextUser);
+  }, []);
 
   React.useEffect(() => {
     void appAuthApi
       .me()
-      .then(authenticatedUser => {
+      .then(async authenticatedUser => {
+        if (appConfig.apiMode === "http") await prepareAuthenticatedOfflineCapability(queryClient);
         appSessionExpiry.reset();
         setFailure(null);
-        setUser(authenticatedUser);
+        setAuthenticatedUser(authenticatedUser);
       })
-      .catch(error => {
+      .catch(async error => {
         const authError = toAppAuthFailureError(error, "bootstrap");
+        const cachedUser = authError.failure.kind === "offline" ? await loadCachedOfflineUser() : null;
+        if (cachedUser) {
+          setFailure(null);
+          setAuthenticatedUser(cachedUser);
+          return;
+        }
         setFailure(authError.failure);
-        if (authError.failure.kind === "unauthenticated") setUser(null);
+        if (authError.failure.kind === "unauthenticated") setAuthenticatedUser(null);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [queryClient, setAuthenticatedUser]);
 
   const value = React.useMemo<AppAuthContextValue>(
     () => ({
@@ -38,7 +98,7 @@ export function AppAuthProvider({ children }: React.PropsWithChildren) {
       expireSession: () => {
         queryClient.clear();
         setFailure({ kind: "expired-session" });
-        setUser(null);
+        setAuthenticatedUser(null);
       },
       login: async (username, password) => {
         setFailure(null);
@@ -52,8 +112,9 @@ export function AppAuthProvider({ children }: React.PropsWithChildren) {
 
         try {
           const authenticatedUser = await appAuthApi.me();
+          if (appConfig.apiMode === "http") await prepareAuthenticatedOfflineCapability(queryClient);
           appSessionExpiry.reset();
-          setUser(authenticatedUser);
+          setAuthenticatedUser(authenticatedUser);
         } catch (error) {
           const authError = toAppAuthFailureError(error, "session");
           setFailure(authError.failure);
@@ -65,8 +126,9 @@ export function AppAuthProvider({ children }: React.PropsWithChildren) {
         setFailure(null);
         try {
           await appAuthApi.logout();
+          await clearOfflineCapability(appConfig.apiMode === "http");
           queryClient.clear();
-          setUser(null);
+          setAuthenticatedUser(null);
         } catch (error) {
           appSessionExpiry.cancelManualLogout();
           const authError = toAppAuthFailureError(error, "logout");
@@ -75,7 +137,7 @@ export function AppAuthProvider({ children }: React.PropsWithChildren) {
         }
       },
     }),
-    [failure, loading, queryClient, user],
+    [failure, loading, queryClient, setAuthenticatedUser, user],
   );
 
   return (

@@ -3,10 +3,38 @@ import type { Item } from "@/features/item/public";
 import { buildHomeOverviewSnapshot, selectHomeAttentionItems } from "@/pages/home/home-overview";
 
 const items: Item[] = [
-  { id: 1, name: "Scanners", description: "", quantity: 18, status: "ACTIVE" },
-  { id: 2, name: "Labels", description: "", quantity: 4, status: "ACTIVE" },
-  { id: 3, name: "Inspection kits", description: "", quantity: 2, status: "DRAFT" },
-  { id: 4, name: "Old tablets", description: "", quantity: 0, status: "ARCHIVED" },
+  {
+    id: "00000000-0000-4000-8000-000000000111",
+    version: 0,
+    name: "Scanners",
+    description: "",
+    quantity: 18,
+    status: "ACTIVE",
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000112",
+    version: 0,
+    name: "Labels",
+    description: "",
+    quantity: 4,
+    status: "ACTIVE",
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000113",
+    version: 0,
+    name: "Inspection kits",
+    description: "",
+    quantity: 2,
+    status: "DRAFT",
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000114",
+    version: 0,
+    name: "Old tablets",
+    description: "",
+    quantity: 0,
+    status: "ARCHIVED",
+  },
 ];
 
 describe("home overview projection", () => {

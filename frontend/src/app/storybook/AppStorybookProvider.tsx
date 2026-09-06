@@ -6,7 +6,6 @@ import { PageOverlayControllerProvider, VireoConfirmationProvider } from "@vireo
 import { AppShellNavigationContext } from "@/app/shell/contexts/AppShellNavigationContext";
 import { AppUnsavedChangesProvider } from "@/app/shell/providers/AppUnsavedChangesProvider";
 import { AppLocalizationProvider } from "@/app/ui/localization/app-localization-provider";
-import { AppPreferencesProvider } from "@/app/ui/preferences/providers/AppPreferencesProvider";
 import { AppThemeProvider } from "@/app/ui/theme/AppThemeProvider";
 
 export type AppStorybookProviderProps = React.PropsWithChildren<{
@@ -39,22 +38,20 @@ export function AppStorybookProvider({ children, initialEntries = ["/"], mobile 
   );
 
   return (
-    <AppPreferencesProvider>
-      <AppLocalizationProvider>
-        <AppThemeProvider>
-          <QueryClientProvider client={queryClient}>
-            <MemoryRouter initialEntries={initialEntries}>
-              <AppStorybookShellProvider mobile={mobile}>
-                <PageOverlayControllerProvider>
-                  <VireoConfirmationProvider>
-                    <AppUnsavedChangesProvider>{children}</AppUnsavedChangesProvider>
-                  </VireoConfirmationProvider>
-                </PageOverlayControllerProvider>
-              </AppStorybookShellProvider>
-            </MemoryRouter>
-          </QueryClientProvider>
-        </AppThemeProvider>
-      </AppLocalizationProvider>
-    </AppPreferencesProvider>
+    <AppLocalizationProvider>
+      <AppThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={initialEntries}>
+            <AppStorybookShellProvider mobile={mobile}>
+              <PageOverlayControllerProvider>
+                <VireoConfirmationProvider>
+                  <AppUnsavedChangesProvider>{children}</AppUnsavedChangesProvider>
+                </VireoConfirmationProvider>
+              </PageOverlayControllerProvider>
+            </AppStorybookShellProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </AppThemeProvider>
+    </AppLocalizationProvider>
   );
 }

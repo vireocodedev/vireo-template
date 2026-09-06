@@ -2,19 +2,15 @@ import type { WidenLeaves } from "@vireocodedev/localization";
 import type en from "./app.en";
 
 const hr = {
-  connectivity: {
-    "browser-offline": "Preglednik je izvan mreže",
-    checking: "Provjera usluge",
-    reachable: "Usluga je dostupna",
-    unavailable: "Usluga nije dostupna",
-    mock: "Lažna usluga",
-    message: {
-      "browser-offline": "Preglednik javlja da nema mrežne veze. Podaci s poslužitelja možda nisu dostupni.",
-      checking: "Provjerava se može li se dosegnuti poslužitelj.",
-      reachable: "Poslužitelj je dostupan.",
-      unavailable: "Poslužitelj nije dostupan. Podaci s poslužitelja možda nisu dostupni.",
-      mock: "Preglednik koristi lokalnu lažnu uslugu.",
-    },
+  offline: {
+    ONLINE: "Na mreži",
+    OFFLINE: "Izvan mreže",
+    SYNCING: "Sinkronizacija",
+    PENDING: "{{count}} na čekanju",
+    FAILED: "{{count}} neuspjelo",
+    OPEN_SETTINGS_WITH_STATUS: "{{status}}. Otvori izvanmrežne postavke",
+    CONNECTION_RESTORED: "Veza je ponovno uspostavljena.",
+    WORKING_OFFLINE: "Rad izvan mreže.",
   },
   navigation: {
     PRIMARY: "Glavna navigacija",
@@ -27,7 +23,13 @@ const hr = {
     OPEN: "Otvori navigaciju",
     QUICK: "Brza navigacija",
   },
-  account: { LABEL: "Račun", OPEN_MENU: "Otvori izbornik računa", SIGN_OUT: "Odjava" },
+  account: {
+    LABEL: "Račun",
+    OPEN_MENU: "Otvori izbornik računa",
+    SIGN_OUT: "Odjava",
+    SIGN_OUT_PENDING_TITLE: "Odbaciti izvanmrežne promjene i odjaviti se?",
+    SIGN_OUT_PENDING_MESSAGE: "Odjava uklanja {{count}} promjena na čekanju ili neuspjelih promjena s ovog uređaja.",
+  },
   auth: {
     outcomes: {
       unauthenticated: "Prijavite se za nastavak.",
@@ -42,6 +44,15 @@ const hr = {
   },
   actions: { BACK: "Natrag" },
   loading: { application: "Učitavanje aplikacije", page: "Učitavanje stranice" },
+  errorBoundary: {
+    heading: "Došlo je do pogreške",
+    message: "Ovu stranicu nije moguće prikazati. Pokušajte ponovno ili odaberite jednu od radnji za oporavak.",
+    actions: "Radnje za oporavak aplikacije",
+    retry: "Pokušaj ponovno",
+    home: "Idi na početnu stranicu",
+    reload: "Ponovno učitaj aplikaciju",
+    signOut: "Odjava",
+  },
   session: { expired: "Vaša je sesija istekla. Ponovno se prijavite." },
   pwa: {
     later: "Kasnije",

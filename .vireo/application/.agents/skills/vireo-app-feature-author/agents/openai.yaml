@@ -1,4 +1,4 @@
 interface:
   display_name: "Vireo App Feature Author"
-  short_description: "Build end-to-end Vireo application features"
-  default_prompt: "Use $vireo-app-feature-author to implement a Vireo application feature."
+  short_description: "Implement focused application features and fixes"
+  default_prompt: "Use $vireo-app-feature-author to implement this scoped feature or reproduce and fix this defect with focused regression coverage."

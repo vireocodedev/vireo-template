@@ -21,7 +21,8 @@ beforeAll(() => {
 afterAll(() => vi.unstubAllGlobals());
 
 const item: Item = {
-  id: 1,
+  id: "00000000-0000-4000-8000-000000000102",
+  version: 0,
   name: "Design system audit",
   description: "Review the application against current Vireo contracts.",
   quantity: 4,

@@ -8,17 +8,17 @@ import {
   useUnsavedChangesRegistration,
   useUnsavedChangesRequestDiscard,
 } from "@vireocodedev/ui";
+import { useVireoForm } from "@vireocodedev/ui/forms";
 import { QueryEngineQuery } from "@/app/data/query/api/queryEngine.api";
 import type { AppQueryEntityKey } from "@/app/data/query/models/AppQueryEntityKey";
 import type { QueryFilterDocument } from "@/app/data/query/models/QueryFilterDocument";
 import type { EntityQueryFilterPresentation, QueryFilterRuleDraft } from "../models/EntityQueryFilters";
 import {
-  areQueryFilterDraftsEqual,
   createQueryFilterCandidates,
   queryFilterDocumentToDraft,
   validateQueryFilterDraft,
 } from "../services/entityQueryFilters";
-import { useAppPreferences } from "@/app/ui/preferences/hooks/useAppPreferences";
+import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 import { EntityQueryFiltersForm } from "./EntityQueryFiltersForm";
 import { useEntityQueryFiltersTranslation } from "../localization/use-entity-query-filters-translation";
 
@@ -34,58 +34,54 @@ export type EntityQueryFiltersOverlayProps = {
   onExited?: () => void;
 };
 
-export function EntityQueryFiltersOverlay({
+type EntityQueryFiltersOverlayContentProps = Pick<
+  EntityQueryFiltersOverlayProps,
+  "entityKey" | "title" | "open" | "value" | "onClear" | "onClose" | "onExited"
+> & {
+  candidates: ReturnType<typeof createQueryFilterCandidates>;
+  definitionAvailable: boolean;
+  definitionError: boolean;
+  dirty: boolean;
+  errors: Record<string, string>;
+  initialLoading: boolean;
+  refreshing: boolean;
+  rules: QueryFilterRuleDraft[];
+  onClearErrors: () => void;
+  onRefetch: () => void;
+  onRulesChange: (rules: QueryFilterRuleDraft[]) => void;
+  onSubmit: () => void;
+};
+
+function EntityQueryFiltersOverlayContent({
   entityKey,
   title,
   open,
   value,
-  presentation,
-  onApply,
   onClear,
   onClose,
   onExited,
-}: EntityQueryFiltersOverlayProps) {
+  candidates,
+  definitionAvailable,
+  definitionError,
+  dirty,
+  errors,
+  initialLoading,
+  refreshing,
+  rules,
+  onClearErrors,
+  onRefetch,
+  onRulesChange,
+  onSubmit,
+}: EntityQueryFiltersOverlayContentProps) {
   const { t } = useEntityQueryFiltersTranslation();
-  const { preferences } = useAppPreferences();
-  const definition = useQuery({ ...QueryEngineQuery.describeEntity(entityKey), enabled: open });
-  const candidates = React.useMemo(
-    () =>
-      definition.data ? createQueryFilterCandidates({ entityKey, definition: definition.data, presentation }) : [],
-    [definition.data, entityKey, presentation],
-  );
-  const [rules, setRules] = React.useState<QueryFilterRuleDraft[]>([]);
-  const [initialRules, setInitialRules] = React.useState<QueryFilterRuleDraft[]>([]);
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const initializedToken = React.useRef("");
-  const token = `${open}:${definition.data?.key ?? "pending"}:${JSON.stringify(value)}`;
-  const initialLoading = definition.isPending && !definition.data;
-  const refreshing = definition.isFetching && !!definition.data;
-
-  React.useEffect(() => {
-    if (!open || !definition.data || initializedToken.current === token) return;
-    const next = queryFilterDocumentToDraft(value, candidates);
-    setRules(next);
-    setInitialRules(next);
-    setErrors({});
-    initializedToken.current = token;
-  }, [candidates, definition.data, open, token, value]);
-
-  const dirty = !areQueryFilterDraftsEqual(rules, initialRules);
+  const preferences = sigAppPreferences.value;
   const scopeId = `query-filters:${entityKey}`;
   useUnsavedChangesRegistration({ dirty, enabled: open, scopeId });
   const requestClose = useUnsavedChangesRequestDiscard(onClose, { scopeId });
 
-  const apply = () => {
-    const result = validateQueryFilterDraft(entityKey, rules, candidates, t);
-    setErrors(result.errors);
-    if (Object.keys(result.errors).length > 0) return;
-    onApply(result.document);
-    onClose();
-  };
-
   const clear = () => {
-    setRules([]);
-    setErrors({});
+    onRulesChange([]);
+    onClearErrors();
     onClear();
     onClose();
   };
@@ -122,20 +118,14 @@ export function EntityQueryFiltersOverlay({
                 <Box sx={{ display: "grid", minHeight: 240, placeItems: "center" }}>
                   {loadingVisible ? <CircularProgress aria-hidden /> : null}
                 </Box>
-              ) : definition.isError && !definition.data ? (
-                <Alert
-                  severity="error"
-                  action={<Button onClick={() => void definition.refetch()}>{t("overlay.retry")}</Button>}
-                >
+              ) : definitionError && !definitionAvailable ? (
+                <Alert severity="error" action={<Button onClick={onRefetch}>{t("overlay.retry")}</Button>}>
                   {t("overlay.loadError")}
                 </Alert>
               ) : (
                 <Stack spacing={2}>
-                  {definition.isError ? (
-                    <Alert
-                      severity="warning"
-                      action={<Button onClick={() => void definition.refetch()}>{t("overlay.retry")}</Button>}
-                    >
+                  {definitionError ? (
+                    <Alert severity="warning" action={<Button onClick={onRefetch}>{t("overlay.retry")}</Button>}>
                       {t("overlay.staleError")}
                     </Alert>
                   ) : null}
@@ -145,8 +135,8 @@ export function EntityQueryFiltersOverlay({
                     rules={rules}
                     errors={errors}
                     onChange={next => {
-                      setRules(next);
-                      setErrors({});
+                      onRulesChange(next);
+                      onClearErrors();
                     }}
                   />
                 </Stack>
@@ -171,10 +161,89 @@ export function EntityQueryFiltersOverlay({
           {t("overlay.clear")}
         </Button>
         <Button onClick={requestClose}>{t("overlay.cancel")}</Button>
-        <Button disabled={!definition.data} variant="contained" onClick={apply}>
+        <Button disabled={!definitionAvailable} variant="contained" onClick={onSubmit}>
           {t("overlay.apply")}
         </Button>
       </Stack>
     </VireoResponsiveOverlayFrame>
+  );
+}
+
+export function EntityQueryFiltersOverlay({
+  entityKey,
+  title,
+  open,
+  value,
+  presentation,
+  onApply,
+  onClear,
+  onClose,
+  onExited,
+}: EntityQueryFiltersOverlayProps) {
+  const { t } = useEntityQueryFiltersTranslation();
+  const definition = useQuery({ ...QueryEngineQuery.describeEntity(entityKey), enabled: open });
+  const candidates = React.useMemo(
+    () =>
+      definition.data ? createQueryFilterCandidates({ entityKey, definition: definition.data, presentation }) : [],
+    [definition.data, entityKey, presentation],
+  );
+  const form = useVireoForm({
+    defaultValues: { rules: [] as QueryFilterRuleDraft[] },
+    validators: {
+      onSubmit: ({ value: formValue }) => {
+        const { errors } = validateQueryFilterDraft(entityKey, formValue.rules, candidates, t);
+        return Object.keys(errors).length > 0 ? errors : undefined;
+      },
+    },
+    onSubmit: ({ value: formValue }) => {
+      const result = validateQueryFilterDraft(entityKey, formValue.rules, candidates, t);
+      onApply(result.document);
+      onClose();
+    },
+  });
+  const initializedToken = React.useRef("");
+  const token = `${open}:${definition.data?.key ?? "pending"}:${JSON.stringify(value)}`;
+  const initialLoading = definition.isPending && !definition.data;
+  const refreshing = definition.isFetching && !!definition.data;
+
+  React.useEffect(() => {
+    if (!open || !definition.data || initializedToken.current === token) return;
+    const next = queryFilterDocumentToDraft(value, candidates);
+    form.reset({ rules: next });
+    initializedToken.current = token;
+  }, [candidates, definition.data, form, open, token, value]);
+
+  return (
+    <form.Subscribe
+      selector={state => ({
+        dirty: state.isDirty,
+        errors: (state.errorMap.onSubmit ?? {}) as Record<string, string>,
+        rules: state.values.rules,
+      })}
+    >
+      {state => (
+        <EntityQueryFiltersOverlayContent
+          entityKey={entityKey}
+          title={title}
+          open={open}
+          value={value}
+          onClear={onClear}
+          onClose={onClose}
+          onExited={onExited}
+          candidates={candidates}
+          definitionAvailable={!!definition.data}
+          definitionError={definition.isError}
+          dirty={state.dirty}
+          errors={state.errors}
+          initialLoading={initialLoading}
+          refreshing={refreshing}
+          rules={state.rules}
+          onClearErrors={() => form.setErrorMap({ onSubmit: undefined })}
+          onRefetch={() => void definition.refetch()}
+          onRulesChange={rules => form.setFieldValue("rules", rules)}
+          onSubmit={() => void form.handleSubmit()}
+        />
+      )}
+    </form.Subscribe>
   );
 }

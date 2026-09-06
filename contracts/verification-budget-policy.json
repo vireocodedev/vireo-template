@@ -35,7 +35,7 @@
       "label": "Browser smoke tests",
       "baselineMs": 60272,
       "warningMs": 110000,
-      "failureMs": 150000,
+      "failureMs": 270000,
       "baselineRssKiB": 206764,
       "warningRssKiB": 3145728,
       "failureRssKiB": 4194304
@@ -62,7 +62,7 @@
   "total": {
     "baselineMs": 230245,
     "warningMs": 300000,
-    "failureMs": 420000,
+    "failureMs": 620000,
     "baselineRssKiB": 2782792,
     "warningRssKiB": 6291456,
     "failureRssKiB": 8388608

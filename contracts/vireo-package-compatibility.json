@@ -3,19 +3,20 @@
   "id": "vireo-template-0.8.7",
   "packages": {
     "@vireocodedev/history": ["^0.2.2"],
-    "@vireocodedev/infrastructure": ["^0.2.2"],
+    "@vireocodedev/infrastructure": ["^0.3.0", "^0.2.2"],
     "@vireocodedev/localization": ["^0.2.2"],
     "@vireocodedev/query": ["^0.2.2"],
     "@vireocodedev/shell": ["^0.2.2"],
-    "@vireocodedev/sqlite": ["^0.2.2", "^0.2.3"],
-    "@vireocodedev/ui": ["^0.3.1"]
+    "@vireocodedev/sqlite": ["^0.2.3", "^0.2.2"],
+    "@vireocodedev/ui": ["^0.3.2", "^0.3.1"]
   },
   "lockedPackages": {
     "@vireocodedev/history": "0.2.2",
-    "@vireocodedev/infrastructure": "0.2.2",
+    "@vireocodedev/infrastructure": "0.3.0",
     "@vireocodedev/localization": "0.2.2",
     "@vireocodedev/query": "0.2.2",
     "@vireocodedev/shell": "0.2.2",
-    "@vireocodedev/ui": "0.3.1"
+    "@vireocodedev/sqlite": "0.2.3",
+    "@vireocodedev/ui": "0.3.2"
   }
 }

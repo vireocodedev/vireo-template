@@ -21,6 +21,7 @@ export function createItemHistoryDefinition(t: TFunction<typeof ITEM_TRANSLATION
     },
     {
       id: false,
+      version: false,
       name: { kind: "field", label: t("fields.name") },
       description: { kind: "field", label: t("fields.description") },
       quantity: {

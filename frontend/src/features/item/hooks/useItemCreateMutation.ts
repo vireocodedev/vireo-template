@@ -4,20 +4,25 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useVireoMutation } from "@vireocodedev/ui/tanstack-query";
 import { useItemTranslation } from "../localization/use-item-translation";
 import type { Item } from "../models/Item";
+import type { ItemMutationResult } from "../api/item.api";
 import { insertItemIntoUnfilteredSearchQueries } from "../services/itemQueryCache";
 
 export function useItemCreateMutation() {
   const { t } = useItemTranslation();
   const queryClient = useQueryClient();
 
-  return useVireoMutation<Item, Error, Item>({
+  return useVireoMutation<ItemMutationResult<Item>, Error, Item>({
     mutationKey: ItemMutationKeys.create,
     mutationFn: itemApi.create.bind(itemApi),
-    successMessage: item => t("messages.created", { name: item.name }),
+    successMessage: result =>
+      t(result.persistence === "QUEUED" ? "messages.queued" : "messages.created", { name: result.value.name }),
     errorMessage: t("messages.createFailed"),
-    onSuccess: item => {
+    onSuccess: result => {
+      const item = result.value;
       insertItemIntoUnfilteredSearchQueries(queryClient, item);
-      void queryClient.invalidateQueries({ queryKey: ItemQueryKeys.all });
+      if (result.persistence === "SAVED") {
+        void queryClient.invalidateQueries({ queryKey: ItemQueryKeys.all });
+      }
     },
   });
 }

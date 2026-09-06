@@ -179,6 +179,44 @@ export function checkPwaSourceContract({ frontendRoot, requireNginx = false } = 
       ]) {
         if (!nginx.includes(required)) problem(problems, `nginx.conf must contain ${required}`);
       }
+      problems.push(...checkOfflineSseNginxContract(nginx));
+    }
+  }
+  return problems;
+}
+
+/** Keep the connectivity authority stream deployable through the owned Nginx path. */
+export function checkOfflineSseNginxContract(nginx) {
+  const problems = [];
+  const streamLocation = "location = /api/offline/heartbeat/stream";
+  const apiLocation = "location /api/";
+  const streamIndex = nginx.indexOf(streamLocation);
+  const apiIndex = nginx.indexOf(apiLocation);
+
+  if (streamIndex < 0) {
+    return ["nginx.conf must define an exact /api/offline/heartbeat/stream SSE location"];
+  }
+  if (apiIndex < 0 || streamIndex > apiIndex) {
+    problems.push("nginx.conf must define the exact offline SSE location before the general /api/ location");
+  }
+
+  const locationBody =
+    nginx.slice(streamIndex).match(/^location = \/api\/offline\/heartbeat\/stream\s*\{(?<body>[\s\S]*?)^\s*\}/mu)
+      ?.groups?.body ?? "";
+  for (const required of [
+    "proxy_pass http://app:8080;",
+    "proxy_http_version 1.1;",
+    "proxy_buffering off;",
+    "proxy_cache off;",
+    'proxy_set_header Connection "";',
+    "proxy_read_timeout 60s;",
+    "proxy_set_header Host $host;",
+    "proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+    "proxy_set_header X-Forwarded-Host $host;",
+    "proxy_set_header X-Forwarded-Proto $scheme;",
+  ]) {
+    if (!locationBody.includes(required)) {
+      problems.push(`nginx.conf offline SSE location must contain ${required}`);
     }
   }
   return problems;

@@ -7,11 +7,13 @@ import { ItemFormFields } from "@/features/item/components/forms/ItemFormFields/
 import { useItemForm } from "@/features/item/hooks/useItemForm";
 import { DEFAULT_ITEM_FORM_VALIDATION_CONTEXT, type Item } from "@/features/item/models/Item";
 import { AppPageLogin } from "@/pages/login/AppPageLogin";
+import { AppPageSettings } from "@/pages/settings/AppPageSettings";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 const item: Item = {
-  id: 42,
+  id: "00000000-0000-4000-8000-000000000101",
+  version: 0,
   name: "Starter audit",
   description: "Verify pending action behavior.",
   quantity: 2,
@@ -28,7 +30,13 @@ function deferred<T>() {
   return { promise, reject, resolve };
 }
 
-function ItemFormHarness({ onSubmit }: { onSubmit: (value: Item) => Promise<void> }) {
+function ItemFormHarness({
+  onSubmit,
+  submissionDisabled = false,
+}: {
+  onSubmit: (value: Item) => Promise<void>;
+  submissionDisabled?: boolean;
+}) {
   const [pending, setPending] = React.useState(false);
   const form = useItemForm({
     initialValue: item,
@@ -47,7 +55,13 @@ function ItemFormHarness({ onSubmit }: { onSubmit: (value: Item) => Promise<void
   return (
     <form.Form layoutWidth="full">
       <ItemFormFields form={form} mode={AppFormMode.enum.UPDATE} />
-      <ItemFormActions editing form={form} onCancel={vi.fn()} pending={pending} />
+      <ItemFormActions
+        editing
+        form={form}
+        onCancel={vi.fn()}
+        pending={pending}
+        submissionDisabled={submissionDisabled}
+      />
     </form.Form>
   );
 }
@@ -82,6 +96,21 @@ describe("busy action loading-state contract", () => {
       expect(save).toBeEnabled();
       expect(cancel).toBeEnabled();
     });
+  });
+
+  it("preserves an editable draft but disables submission during offline recovery", () => {
+    render(
+      <AppStorybookProvider>
+        <ItemFormHarness onSubmit={vi.fn().mockResolvedValue(undefined)} submissionDisabled />
+      </AppStorybookProvider>,
+    );
+
+    const name = screen.getByRole("textbox", { name: "Name" });
+    fireEvent.change(name, { target: { value: "Draft preserved during recovery" } });
+
+    expect(name).toHaveValue("Draft preserved during recovery");
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
   });
 
   it("retains the login card, prevents duplicate submission, and recovers after failure", async () => {
@@ -124,5 +153,43 @@ describe("busy action loading-state contract", () => {
     await act(async () => submission.reject(new Error("Invalid credentials")));
     expect(await screen.findByText("The sign-in service is temporarily unavailable. Try again later.")).toBeVisible();
     await waitFor(() => expect(submit).toBeEnabled());
+  });
+
+  it("permits one offline maintenance action and recovers after rejection", async () => {
+    const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const reset = deferred<void>();
+    const resetOfflineCache = vi.fn(() => reset.promise);
+
+    render(
+      <AppStorybookProvider initialEntries={["/settings"]}>
+        <AppPageSettings
+          offlineOperations={{
+            discard: vi.fn().mockResolvedValue(undefined),
+            reset: resetOfflineCache,
+            retry: vi.fn().mockResolvedValue(undefined),
+          }}
+        />
+      </AppStorybookProvider>,
+    );
+
+    const resetButton = screen.getByRole("button", { name: "Reset cache" });
+    fireEvent.click(resetButton);
+
+    await waitFor(() => expect(resetButton).toBeDisabled());
+    expect(resetButton).toHaveAttribute("aria-busy", "true");
+    fireEvent.click(resetButton);
+    expect(resetOfflineCache).toHaveBeenCalledOnce();
+
+    await act(async () => reset.reject(new Error("Storage unavailable")));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The local cache could not be reset. Reload the app and try again.",
+    );
+    expect(screen.queryByText(/Storage unavailable/u)).not.toBeInTheDocument();
+    expect(diagnostic).toHaveBeenCalledWith(
+      "Offline Settings action failed.",
+      expect.objectContaining({ action: "reset", error: expect.any(Error) }),
+    );
+    await waitFor(() => expect(resetButton).toBeEnabled());
+    expect(resetButton).toHaveAttribute("aria-busy", "false");
   });
 });

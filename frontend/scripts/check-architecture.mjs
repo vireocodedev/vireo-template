@@ -2,7 +2,13 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { mayAppImportFeature, mayImportGeneratedRegistry } from "./architecture-policy.mjs";
+import {
+  mayAppImportFeature,
+  mayDefineGlobalSignalEffects,
+  mayImportGeneratedRegistry,
+  signalModuleProblems,
+  usesGlobalSignalEffect,
+} from "./architecture-policy.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = path.join(root, "src");
@@ -30,6 +36,7 @@ const allowedFeatureDirectories = new Set([
   "offline",
   "providers",
   "services",
+  "signals",
   "state",
   "storybook",
   "tests",
@@ -107,8 +114,22 @@ for (const pageName of await readdir(path.join(sourceRoot, "pages"))) {
 for (const file of sourceFiles) {
   const relativeFile = path.relative(sourceRoot, file);
   const normalizedRelativeFile = relativeFile.replaceAll(path.sep, "/");
+  const fileName = path.basename(file);
+  const inSignalsDirectory = path.basename(path.dirname(file)) === "signals";
   const ownFeature = relativeFile.startsWith(`features${path.sep}`) ? relativeFile.split(path.sep)[1] : undefined;
   const source = await readFile(file, "utf8");
+
+  if (inSignalsDirectory) {
+    errors.push(
+      ...signalModuleProblems(fileName, source).map(problem => `${relativeFile} is a signal definition and ${problem}`),
+    );
+  }
+
+  if (usesGlobalSignalEffect(source) && !mayDefineGlobalSignalEffects(normalizedRelativeFile)) {
+    errors.push(
+      `${relativeFile} defines a global signal effect outside app/init-signal-effects.ts; use useSignalEffect for component-local effects`,
+    );
+  }
 
   const formFieldsExport = source.match(formFieldsExportPattern);
   if (formFieldsExport) {
@@ -234,6 +255,20 @@ for (const file of sourceFiles) {
       );
     }
   }
+}
+
+const globalSignalEffectsFile = path.join(sourceRoot, "app", "init-signal-effects.ts");
+const mainFile = path.join(sourceRoot, "main.tsx");
+const globalSignalEffectsSource = await readFile(globalSignalEffectsFile, "utf8").catch(() => undefined);
+const mainSource = await readFile(mainFile, "utf8");
+
+if (!globalSignalEffectsSource?.includes("export function initSignalEffects")) {
+  errors.push("app/init-signal-effects.ts must define the centralized global signal-effect initializer");
+}
+const signalEffectsCallIndex = mainSource.indexOf("initSignalEffects();");
+const reactMountIndex = mainSource.indexOf("ReactDOM.createRoot");
+if (signalEffectsCallIndex < 0 || reactMountIndex < 0 || signalEffectsCallIndex > reactMountIndex) {
+  errors.push("main.tsx must initialize global signal effects before rendering");
 }
 
 if (errors.length > 0) {

@@ -8,9 +8,16 @@ export type ItemFormActionsProps = {
   form: ItemFormApi;
   onCancel: () => void;
   pending?: boolean;
+  submissionDisabled?: boolean;
 };
 
-export function ItemFormActions({ editing, form, onCancel, pending = false }: ItemFormActionsProps) {
+export function ItemFormActions({
+  editing,
+  form,
+  onCancel,
+  pending = false,
+  submissionDisabled = false,
+}: ItemFormActionsProps) {
   const { t } = usePlatformTranslation();
   const { t: tItem } = useItemTranslation();
 
@@ -19,7 +26,9 @@ export function ItemFormActions({ editing, form, onCancel, pending = false }: It
       <Button disabled={pending} onClick={onCancel}>
         {t("common.cancel")}
       </Button>
-      <form.SubmitButton variant="contained">{editing ? tItem("form.update") : tItem("form.create")}</form.SubmitButton>
+      <form.SubmitButton disabled={pending || submissionDisabled} variant="contained">
+        {editing ? tItem("form.update") : tItem("form.create")}
+      </form.SubmitButton>
     </form.Actions>
   );
 }

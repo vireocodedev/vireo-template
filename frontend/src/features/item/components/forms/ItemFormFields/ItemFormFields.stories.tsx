@@ -8,7 +8,8 @@ import { ItemFormFields } from "./ItemFormFields";
 
 const submitted = fn();
 const item: Item = {
-  id: 7,
+  id: "77777777-7777-4777-8777-777777777777",
+  version: 0,
   name: "Design system audit",
   description: "Review the application against current Vireo contracts.",
   quantity: 4,

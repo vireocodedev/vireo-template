@@ -1,62 +1,54 @@
 # Offline behavior
 
-The unmodified Template supports an **offline application shell**, not offline Item
-CRUD or arbitrary synchronization.
+The Template is offline-capable for the `Item` feature. Generated CRUD and Item history remain online-only.
 
-After one successful production load, the service worker can start the static React
-shell without the backend. The connectivity indicator separately reports browser
-offline, checking, backend reachable, backend unavailable, or mock mode. Browser
-online is only a hint: the HTTP readiness probe treats any received response,
-including 4xx and 5xx, as reachability evidence. API routes are explicitly
-`NetworkOnly`, so Item search, create, edit, and delete require a live authenticated
-server connection and are not acknowledged as queued.
+## Connectivity
 
-Generated schema v1 also fixes `capabilities.offline` to `false`. This avoids
-creating a plausible-looking queue without domain eligibility, temporary-ID,
-authorization, conflict, privacy, and recovery decisions.
+A validated SSE `heartbeat` is the only event that marks the application online. The application starts offline and returns offline after 12 seconds without a heartbeat.
 
-## Enabling a real disconnected workflow
+`navigator.onLine`, an opened SSE connection, and successful REST responses do not control connectivity.
 
-Use Vireo's SQLite and server replay modules only after completing the framework's
-[offline guarantees and admission checklist](https://github.com/vireocodedev/vireo/blob/main/docs/OFFLINE_GUARANTEES.md).
-At minimum, the application must own:
+The canonical Nginx route for `/api/offline/heartbeat/stream` uses HTTP/1.1, disables proxy buffering and caching, and waits 60 seconds for a response. A replacement proxy must preserve the backend's `Cache-Control: no-cache` and `X-Accel-Buffering: no` headers, avoid buffering or caching the stream, and use an idle/read timeout safely above the 5-second heartbeat interval.
 
-- which reads and mutations are safe offline;
-- user-and-tenant storage identity and logout/switch cleanup;
-- command dependency, idempotency, temporary-ID, and transaction rules;
-- retry, permanent-failure, conflict, cancel/discard, and recovery UX;
-- local-data classification, quota, corruption, migration, and purge policy; and
-- adversarial tests across tabs, devices, versions, session expiry, storage failure,
-  network interruption, and server schema changes.
+The Offline Settings simulator disables the stream for the current browser tab. It exercises the same heartbeat-expiry path as a real outage.
 
-Do not change the Workbox API handler from `NetworkOnly` to a cache-first strategy.
-Authenticated API response caching needs a separate data-isolation and invalidation
-design; a generic service-worker cache can expose stale data across users.
+## Local data
 
-## Current limits
+After initialization, Item lists are rendered from application-owned SQLite in OPFS. Item cache rows use permanent UUIDs and optimistic versions.
 
-- Offline before the first successful load cannot provision the shell or sign in.
-- Refreshing an already-provisioned production build can load the shell but not
-  server data.
-- No Item writes are durably queued by the Template.
-- No generated conflict UI, multi-device merge, background sync, or cross-version
-  command migration is claimed.
-- Installed-PWA behavior is automated where browser tooling permits; physical iOS
-  and Android evidence remains a manual release row.
+Online Item mutations use REST and update SQLite after success. Offline mutations, or REST mutations that fail because of a network error or `503`, atomically update SQLite and append an ordered replay command.
 
-## Update and recovery procedure
+The service worker keeps `/api` routes `NetworkOnly`. Authenticated API responses are never stored in a generic Workbox cache.
 
-The application checks for a waiting worker when it registers and at a conservative
-hourly interval. It prompts before activation and preserves the unsaved-change
-confirmation guard. A registration or activation failure leaves the current page in
-place and shows a recoverable warning. The PWA test fixture builds revision A and B
-sequentially, switches only its test-owned static selector, and proves discovery,
-prompt, activation, reload, and revision-B control; it does not add a production
-endpoint or bypass the prompt.
+## Reconnection
 
-For a worker/cache incident, first preserve the browser console and deployed build
-revision. Then use the browser's site-data controls to unregister the worker and
-clear this application's storage, reload online, and confirm the current manifest
-and `/sw.js` are served with `Cache-Control: no-cache`. This removes the offline
-shell and any application-owned local state, so product teams must provide a
-domain-specific recovery path before they persist user data offline.
+The first valid heartbeat after an offline period starts this sequence:
+
+1. Revalidate the cached stable user identity and role.
+2. Replay queued Item commands in order.
+3. Hydrate all Item pages from REST into SQLite.
+
+Only one tab performs replay and hydration at a time through the Web Locks API. Reads remain available while this runs; Item mutations are temporarily disabled.
+
+Transient replay failures retry with bounded backoff. Permanent rejection pauses replay and marks the optimistic row as a conflict. Replayed creates are `POST` requests with the client UUID; updates are `PATCH` requests with the path UUID and optimistic version only in the body. **Rebase and retry** turns a colliding create into a complete PATCH at the authoritative version. A PATCH whose Item was deleted or is missing becomes a create only when a complete cached Item state remains; consecutive PATCHes then coalesce into that one complete create so a hidden tombstone version cannot conflict with later local intent. Otherwise retry stops with an explicit failure. **Keep server changes** discards the local queue and optimistic rows before hydration.
+
+## Identity and authorization
+
+Offline access requires a successfully cached identity containing only the stable user ID, username, role, and validation time. It expires after 24 hours.
+
+`USER` can read cached Items. `SUPERADMIN` can also queue Item mutations. The backend reauthorizes every replayed command.
+
+Switching to a different stable user ID purges the previous user's local data. Logout with pending or failed work requires confirmation and then purges it.
+
+## Limits and recovery
+
+- First sign-in requires the backend.
+- Item history requires the backend.
+- Generated entities remain online-only until explicitly admitted.
+- The client queue is limited to 1,000 commands.
+- OPFS requires a cross-origin-isolated page served from HTTPS or localhost. Reload after changing the COOP/COEP headers because an open document cannot acquire isolation later.
+- OPFS failure produces an explicit online-only state; production does not silently fall back to memory.
+- Reset Offline Data clears the Item cache, queue, failures, hydration state, and stored owner. It keeps application preferences and the active online session.
+- There is no custom application-level encryption for local Item data.
+
+For the reusable design and implementation patterns, see the Vireo UI/UX Handbook documents for offline-capable apps and server-sent events.

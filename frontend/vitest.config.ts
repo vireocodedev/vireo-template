@@ -2,6 +2,7 @@ import react from "@vitejs/plugin-react";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { configDefaults, defineConfig } from "vitest/config";
+import { signalsReactTransform } from "./config/signals-react-transform.ts";
 
 const useLocalStarter = process.env.USE_LOCAL_STARTER === "true";
 const useLocalStarterSource = process.env.USE_LOCAL_STARTER_SOURCE === "true";
@@ -82,7 +83,7 @@ const localStarterDistAliases = useLocalStarter
   : [];
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), signalsReactTransform()],
   resolve: {
     dedupe: [
       "react",

@@ -12,27 +12,17 @@ export const APP_THEME_COMPONENTS: Theme["components"] = {
       },
     }),
   },
-  VireoApplicationNavigation: {
-    styleOverrides: {
-      surface: ({ theme }) => ({
-        "& .MuiDrawer-paper": {
-          backgroundColor: theme.palette.appSurface.content,
-          borderColor: theme.palette.divider,
-        },
-      }),
-    },
-  },
   VireoApplicationNavigationItem: {
     styleOverrides: {
-      root: ({ theme }) => ({
+      root: ({ ownerState, theme }) => ({
         border: "1px solid transparent",
-        "&.Mui-selected": {
+        ...(ownerState.selected && {
           backgroundColor: theme.palette.action.selected,
           borderColor: `color-mix(in srgb, ${theme.palette.primary.main} 42%, ${theme.palette.divider})`,
           boxShadow: `inset 0 1px 0 color-mix(in srgb, ${theme.palette.common.white} 8%, transparent)`,
           color: theme.palette.primary.main,
-        },
-        "&.Mui-selected:hover": { backgroundColor: theme.palette.action.selected },
+          "&:hover": { backgroundColor: theme.palette.action.selected },
+        }),
       }),
       label: ({ ownerState }) => ({
         letterSpacing: ownerState.mode === "compact" ? "0.035em" : "0.01em",
@@ -94,9 +84,7 @@ export const APP_THEME_COMPONENTS: Theme["components"] = {
       }),
       section: ({ ownerState, theme }) => ({
         backgroundColor: ownerState.isCompact ? theme.palette.appSurface.screen : theme.palette.appSurface.content,
-        ...(ownerState.isCompact && {
-          "& + &": { borderColor: theme.palette.divider },
-        }),
+        ...(ownerState.isCompact && { borderColor: theme.palette.divider }),
       }),
       sectionHeader: ({ ownerState, theme }) => ({
         backgroundColor: ownerState.isCompact ? theme.palette.appSurface.content : theme.palette.appSurface.elevated,
@@ -104,9 +92,7 @@ export const APP_THEME_COMPONENTS: Theme["components"] = {
       }),
       item: ({ ownerState, theme }) => ({
         backgroundColor: ownerState.isCompact ? theme.palette.appSurface.screen : theme.palette.appSurface.content,
-        ...(ownerState.isCompact && {
-          "& + &": { borderColor: theme.palette.divider },
-        }),
+        ...(ownerState.isCompact && { borderColor: theme.palette.divider }),
         "@media (hover: hover)": {
           "&:hover": { backgroundColor: theme.palette.action.hover },
         },
@@ -116,11 +102,9 @@ export const APP_THEME_COMPONENTS: Theme["components"] = {
           },
         },
       }),
-      itemControl: {
-        "& .MuiButton-sizeMedium": { minHeight: 48 },
-      },
     },
   },
+  // TODO(vireocodedev/vireo#128): move these responsive surface styles to public Vireo slots.
   VireoResponsiveTable: {
     styleOverrides: {
       root: ({ ownerState, theme }) => ({
@@ -173,10 +157,10 @@ export const APP_THEME_COMPONENTS: Theme["components"] = {
       }),
     },
   },
-  MuiTableBody: {
+  MuiTableRow: {
     styleOverrides: {
       root: ({ theme }) => ({
-        "& > .MuiTableRow-root.MuiTableRow-hover:hover": {
+        "&.MuiTableRow-hover:hover": {
           backgroundColor: `color-mix(in srgb, ${theme.palette.appSurface.elevated} 72%, ${theme.palette.appSurface.content})`,
         },
       }),

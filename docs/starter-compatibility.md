@@ -6,13 +6,14 @@ The template's ordinary install, development, test, Storybook, and production-bu
 
 | Package                        | Supported line |
 | ------------------------------ | -------------- |
-| `@vireocodedev/ui`             | `^0.3.1`       |
+| `@vireocodedev/ui`             | `^0.3.2`       |
 | `@vireocodedev/query`          | `^0.2.2`       |
 | `@vireocodedev/shell`          | `^0.2.2`       |
 | `@vireocodedev/history`        | `^0.2.2`       |
-| `@vireocodedev/infrastructure` | `^0.2.2`       |
+| `@vireocodedev/infrastructure` | `^0.3.0`       |
 | `@vireocodedev/localization`   | `^0.2.2`       |
-| Vireo Starter JVM modules      | `0.3.1`        |
+| `@vireocodedev/sqlite`         | `^0.2.3`       |
+| Vireo Starter JVM modules      | `0.4.0`        |
 
 The lockfiles are the reproducibility boundary. Updating a supported package range still requires reviewing and committing the resulting lockfile changes and passing the authoritative verification command.
 
@@ -53,6 +54,23 @@ A cross-stack change that cannot tolerate mixed frontend/backend versions requir
 an explicit deployment order. Do not infer wire, schema, or generated-code
 compatibility merely because both halves build independently.
 
+### Item UUID migration deployment
+
+`V4__migrate_item_ids_to_uuid.sql` is a forward-only application migration for
+an existing numeric `item` table. It deterministically remaps each Item to an
+RFC 4122 version-4 UUID, sets the first optimistic version to `0`, and rewrites
+the retained Item history row ID and non-redacted JSON snapshot `id`/`version`
+fields to that shape. It has no safe down migration: an older binary expecting
+numeric IDs must never start against the migrated database.
+
+Before deploying it, drain Item writes and offline replay, take and verify a
+restoreable backup, rehearse the exact production data volume, and deploy the
+matching backend and frontend as one maintenance-window release. Validate Item
+reads, writes, history, SSE, and offline replay before accepting traffic. If
+cutover fails after Flyway applies V4, rollback means restoring the pre-migration
+database or completing a reviewed forward fix; it does not mean routing traffic
+to the prior application version.
+
 Toolchain and workflow policy are checked inside the authoritative frontend gate.
 Recurring Java, browser, and PostgreSQL compatibility evidence is described in
 [Platform support evidence](platform-support-evidence.md).
@@ -70,6 +88,10 @@ Every production application build enforces two raw JavaScript budgets:
 | Measurement              |    Budget |
 | ------------------------ | --------: |
 | Largest emitted chunk    |   700 KiB |
-| Total emitted JavaScript | 2,400 KiB |
+| Total emitted JavaScript | 2,500 KiB |
 
-These are regression tripwires, not performance targets. If a real feature requires increasing a budget, document the reason and review the loading behavior before changing it. Prefer route-level loading and dependency reduction over merely increasing a limit.
+These are regression tripwires, not performance targets. The total budget includes
+the offline showcase's separately loaded application SQLite Worker and WASM
+bootstrap. If another feature requires increasing a budget, document the reason and
+review the loading behavior before changing it. Prefer route-level loading and
+dependency reduction over merely increasing a limit.

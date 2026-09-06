@@ -1,4 +1,4 @@
-import { useAppPreferences } from "@/app/ui/preferences/hooks/useAppPreferences";
+import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 import { createHistoryTimestampFormatter, type HistoryTimestampFormatter } from "@/features/history/public";
 import { useItemHistory } from "../../hooks/useItemHistory";
 import type { Item } from "../../models/Item";
@@ -84,7 +84,7 @@ function formatHistoryMeta(
 
 export function ItemHistoryOverlay({ item, open, onClose, onExited }: ItemHistoryOverlayProps) {
   const { t, i18n } = useItemTranslation();
-  const { preferences } = useAppPreferences();
+  const preferences = sigAppPreferences.value;
   const history = useItemHistory(item.id, open);
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const records = history.data ?? [];

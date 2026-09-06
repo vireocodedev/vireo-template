@@ -39,6 +39,7 @@ dependencies {
     implementation 'com.vireocode:vireo-auth'
     implementation 'com.vireocode:vireo-query'
     implementation 'com.vireocode:vireo-history'
+    implementation 'com.vireocode:vireo-offline'
 
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-flyway'

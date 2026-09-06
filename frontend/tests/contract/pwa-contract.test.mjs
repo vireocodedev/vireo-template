@@ -2,7 +2,11 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { checkPwaBuiltContract, checkPwaSourceContract } from "../../scripts/pwa-contract.mjs";
+import {
+  checkOfflineSseNginxContract,
+  checkPwaBuiltContract,
+  checkPwaSourceContract,
+} from "../../scripts/pwa-contract.mjs";
 
 const temporaryRoots = [];
 
@@ -52,6 +56,28 @@ location ~ ^/actuator/health/ {}
     const problems = checkPwaSourceContract({ frontendRoot, requireNginx: true });
 
     expect(problems).toContain("nginx.conf must contain default_type application/manifest+json;");
+  });
+
+  it("requires an unbuffered, uncached, long-lived proxy for the offline SSE stream", () => {
+    const missingContract = checkOfflineSseNginxContract("location /api/ {}");
+    expect(missingContract).toContain("nginx.conf must define an exact /api/offline/heartbeat/stream SSE location");
+
+    const validContract = checkOfflineSseNginxContract(`
+location = /api/offline/heartbeat/stream {
+  proxy_pass http://app:8080;
+  proxy_http_version 1.1;
+  proxy_buffering off;
+  proxy_cache off;
+  proxy_set_header Connection "";
+  proxy_read_timeout 60s;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Host $host;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+location /api/ {}
+`);
+    expect(validContract).toEqual([]);
   });
 
   it("reports malformed emitted metadata and a missing worker", async () => {

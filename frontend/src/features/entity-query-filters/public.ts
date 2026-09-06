@@ -3,4 +3,3 @@ export { EntityQueryFiltersOverlay } from "./components/EntityQueryFiltersOverla
 export { useDebouncedSearchText } from "./hooks/useDebouncedSearchText";
 export type { EntityQueryFilterPresentation } from "./models/EntityQueryFilters";
 export { formatQueryResultCount } from "./services/entityQueryFilters";
-export { readEntityListState, writeEntityListState } from "./state/entityListState";

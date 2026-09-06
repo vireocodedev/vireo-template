@@ -8,13 +8,20 @@ export type ItemRequestOptions = {
   signal?: AbortSignal;
 };
 
+export type ItemMutationPersistence = "QUEUED" | "SAVED";
+
+export type ItemMutationResult<TValue> = Readonly<{
+  persistence: ItemMutationPersistence;
+  value: TValue;
+}>;
+
 export interface ItemApi {
   search(
     pagination: PageableParams,
     filters: ItemFilters,
     request?: ItemRequestOptions,
   ): Promise<PageableResponse<Item>>;
-  create(value: Item): Promise<Item>;
-  update(id: number, value: Item): Promise<Item>;
-  delete(id: number): Promise<void>;
+  create(value: Item): Promise<ItemMutationResult<Item>>;
+  update(id: string, value: Item): Promise<ItemMutationResult<Item>>;
+  delete(id: string, version: number): Promise<ItemMutationResult<undefined>>;
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { useAppPreferences } from "@/app/ui/preferences/hooks/useAppPreferences";
+import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 import { APP_THEME } from "@/app/ui/theme/config/theme";
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider, useColorScheme } from "@mui/material/styles";
@@ -18,7 +18,7 @@ function AppThemeModeSynchronizer({ children, mode }: React.PropsWithChildren<{ 
 }
 
 export function AppThemeProvider({ children }: React.PropsWithChildren) {
-  const { preferences } = useAppPreferences();
+  const preferences = sigAppPreferences.value;
   const mode: AppThemeMode = preferences.darkMode ? "dark" : "light";
 
   return (

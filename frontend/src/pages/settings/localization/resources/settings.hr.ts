@@ -3,7 +3,42 @@ import type en from "./settings.en";
 const hr = {
   header: { title: "Postavke", description: "Prilagodite ponašanje i prikaz podataka u ovom radnom prostoru." },
   search: { placeholder: "Pretraži postavke", empty: "Nijedna postavka ne odgovara upitu „{{search}}”." },
-  sections: { appearance: "Izgled", layout: "Raspored", defaults: "Zadane vrijednosti" },
+  sections: { appearance: "Izgled", layout: "Raspored", offline: "Izvan mreže", defaults: "Zadane vrijednosti" },
+  offline: {
+    simulation: {
+      title: "Simulator izvan mreže",
+      description: "Zadržite ovu karticu izvan mreže i isključite tok stvarnog vremena.",
+      unavailable: "Ponovno učitajte aplikaciju. Ako pohrana ostane nedostupna, koristite HTTPS ili localhost.",
+    },
+    replayFailure: {
+      title: "Neuspješan sljedeći pokušaj",
+      description: "Jednom zaustavite sljedeću sinkronizaciju reda radi pregleda ponovnog pokušaja.",
+    },
+    status: {
+      title: "Izvanmrežno stanje",
+      description: "{{connection}} · predmemorija {{cache}} · na čekanju {{pending}} · neuspjelo {{failed}}",
+      ONLINE: "Na mreži",
+      OFFLINE: "Izvan mreže",
+      ready: "spremna",
+      unavailable: "nedostupna",
+    },
+    retry: "Ponovno uskladi i pokušaj",
+    action: {
+      retryFailed: "Promjene na čekanju nisu ponovno poslane. Provjerite vezu i pokušajte ponovno.",
+      discardFailed: "Lokalne promjene nisu odbačene. Pokušajte ponovno.",
+      resetFailed: "Lokalna predmemorija nije ponovno postavljena. Osvježite aplikaciju i pokušajte ponovno.",
+    },
+    discard: {
+      title: "Zadrži promjene poslužitelja",
+      description: "Odbacite lokalne promjene stavki i zadržite trenutačnu verziju na poslužitelju.",
+      action: "Odbaci",
+    },
+    reset: {
+      title: "Ponovno postavi lokalnu predmemoriju",
+      description: "Ponovno pokrenite lokalnu predmemoriju stavki u pregledniku.",
+      action: "Ponovno postavi",
+    },
+  },
   language: {
     title: "Jezik",
     description: "Odaberite jezik i regionalno oblikovanje koje se koristi u cijeloj aplikaciji.",

@@ -1,13 +1,13 @@
 import { ItemMutationKeys } from "../api/item.query";
 import { useMutationState } from "@tanstack/react-query";
 
-export function usePendingItemUpdateId(): number | null {
-  const ids = useMutationState<number>({
+export function usePendingItemUpdateId(): string | null {
+  const ids = useMutationState<string>({
     filters: { mutationKey: ItemMutationKeys.update, status: "pending" },
     select: mutation => {
       const variables = mutation.state.variables as { id?: unknown } | undefined;
-      return typeof variables?.id === "number" ? variables.id : -1;
+      return typeof variables?.id === "string" ? variables.id : "";
     },
   });
-  return ids.filter(id => id >= 0).at(-1) ?? null;
+  return ids.filter(Boolean).at(-1) ?? null;
 }

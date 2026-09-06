@@ -1,5 +1,7 @@
 package com.vireocode.startertemplate.app.item;
 
+import java.util.UUID;
+
 import com.vireocode.vireo.base.BaseEntity;
 import com.vireocode.vireo.queryengine.Filterable;
 import com.vireocode.vireo.queryengine.FilterableMetadata;
@@ -9,10 +11,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -30,8 +31,12 @@ import lombok.Setter;
 public class Item extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(nullable = false, updatable = false)
+    private UUID id;
+
+    @Version
+    @Column(nullable = false)
+    private Long version;
 
     @NotBlank
     @Size(max = 255)

@@ -32,14 +32,17 @@ describe("application query error reporting", () => {
     consoleError.mockRestore();
   });
 
-  it("ignores non-validation errors and does not retry validation failures", () => {
+  it("logs transport errors and does not retry validation failures", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const transportError = new Error("Network unavailable");
     const validationError = new z.ZodError([]);
 
     reportMutationError(transportError, { options: { mutationKey: ["save-item"] } } as never);
 
-    expect(consoleError).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "API request failed.",
+      expect.objectContaining({ source: "mutation", key: ["save-item"], error: transportError }),
+    );
     expect(shouldRetryQueryFailure(0, validationError)).toBe(false);
     expect(shouldRetryQueryFailure(0, transportError)).toBe(true);
     expect(shouldRetryQueryFailure(1, transportError)).toBe(false);

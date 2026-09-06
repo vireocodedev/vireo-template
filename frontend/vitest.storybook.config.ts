@@ -10,9 +10,11 @@ export default mergeConfig(
     // Storybook's interaction runtime reaches this public boundary even when a
     // generated application has only a minimal set of stories. Prebundle the
     // package entry point so its CommonJS aria-query/lz-string dependencies do
-    // not become native ESM imports in the browser test runtime.
+    // not become native ESM imports in the browser test runtime. The Signals
+    // transform injects its runtime import, which must also be ready before the
+    // browser projects start so Vite does not reload them mid-run.
     optimizeDeps: {
-      include: ["@testing-library/dom"],
+      include: ["@preact/signals-react/runtime", "@testing-library/dom", "@vireocodedev/sqlite"],
     },
     test: {
       testTimeout: 30_000,

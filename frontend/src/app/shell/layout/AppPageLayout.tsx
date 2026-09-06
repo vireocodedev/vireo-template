@@ -2,7 +2,7 @@ import React from "react";
 import { useMediaQuery, useTheme } from "@mui/material";
 import { PageOverlayOutlet, VireoPage, VireoPageBody } from "@vireocodedev/ui";
 import { useLocation } from "react-router";
-import { useAppPreferences } from "@/app/ui/preferences/hooks/useAppPreferences";
+import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 
 const pageScrollPositions = new Map<string, number>();
 const MAX_RETAINED_PAGE_SCROLL_POSITIONS = 50;
@@ -27,7 +27,7 @@ export function AppPageLayout({ children, header, paddingOnCompact = true, scrol
   const location = useLocation();
   const scrollRegionRef = React.useRef<HTMLDivElement>(null);
   const desktop = useMediaQuery(theme.breakpoints.up("sm"));
-  const { preferences } = useAppPreferences();
+  const preferences = sigAppPreferences.value;
   const maxWidth = preferences.pageWidth === "full" ? false : preferences.pageWidth;
   const docked = desktop && preferences.desktopSurface === "dockedSidePanel";
   const overlayOutlet = <PageOverlayOutlet />;

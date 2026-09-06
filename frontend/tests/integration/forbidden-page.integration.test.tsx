@@ -5,28 +5,25 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { APP_PAGES } from "@/app/app.pages";
 import { AppShellNavigationContext } from "@/app/shell/contexts/AppShellNavigationContext";
-import { AppPreferencesContext } from "@/app/ui/preferences/contexts/AppPreferencesContext";
 import { DEFAULT_APP_PREFERENCES } from "@/app/ui/preferences/models/AppPreferences";
+import { sigAppPreferences } from "@/app/ui/preferences/signals/sigAppPreferences";
 import { AppPageForbidden } from "@/pages/forbidden/AppPageForbidden";
 
 describe("AppPageForbidden", () => {
   it("explains the denied access and returns to the overview", () => {
+    sigAppPreferences.value = DEFAULT_APP_PREFERENCES;
     render(
       <ThemeProvider theme={createTheme()}>
-        <AppPreferencesContext.Provider
-          value={{ preferences: DEFAULT_APP_PREFERENCES, updatePreference: vi.fn(), resetPreferences: vi.fn() }}
-        >
-          <PageOverlayControllerProvider>
-            <AppShellNavigationContext.Provider value={{ mobile: false, openNavigation: vi.fn() }}>
-              <MemoryRouter initialEntries={[APP_PAGES.forbidden]}>
-                <Routes>
-                  <Route path={APP_PAGES.home} element={<h1>Overview</h1>} />
-                  <Route path={APP_PAGES.forbidden} element={<AppPageForbidden />} />
-                </Routes>
-              </MemoryRouter>
-            </AppShellNavigationContext.Provider>
-          </PageOverlayControllerProvider>
-        </AppPreferencesContext.Provider>
+        <PageOverlayControllerProvider>
+          <AppShellNavigationContext.Provider value={{ mobile: false, openNavigation: vi.fn() }}>
+            <MemoryRouter initialEntries={[APP_PAGES.forbidden]}>
+              <Routes>
+                <Route path={APP_PAGES.home} element={<h1>Overview</h1>} />
+                <Route path={APP_PAGES.forbidden} element={<AppPageForbidden />} />
+              </Routes>
+            </MemoryRouter>
+          </AppShellNavigationContext.Provider>
+        </PageOverlayControllerProvider>
       </ThemeProvider>,
     );
 

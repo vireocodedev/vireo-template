@@ -1,7 +1,16 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { AppErrorBoundary } from "@/app/shell/components/AppErrorBoundary";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  APP_ERROR_BOUNDARY_FALLBACK_COPY,
+  resolveAppErrorBoundaryCopy,
+} from "@/app/shell/services/app-error-boundary-copy";
+import { appI18n } from "@/app/ui/localization/app-i18n";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+beforeEach(async () => {
+  await appI18n.changeLanguage("en");
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -67,5 +76,28 @@ describe("AppErrorBoundary", () => {
     expect(goHome).toHaveBeenCalledOnce();
     expect(reload).toHaveBeenCalledOnce();
     expect(logout).toHaveBeenCalledOnce();
+  });
+
+  it("uses Croatian recovery copy when localization is ready", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await appI18n.changeLanguage("hr");
+
+    function BrokenPage(): React.ReactNode {
+      throw new Error("private diagnostic");
+    }
+
+    render(
+      <AppErrorBoundary scope="route">
+        <BrokenPage />
+      </AppErrorBoundary>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Došlo je do pogreške" })).toBeVisible();
+    expect(screen.getByRole("group", { name: "Radnje za oporavak aplikacije" })).toBeVisible();
+    expect(screen.queryByText(/private diagnostic/u)).not.toBeInTheDocument();
+  });
+
+  it("keeps safe English recovery copy available before localization initializes", () => {
+    expect(resolveAppErrorBoundaryCopy(false)).toEqual(APP_ERROR_BOUNDARY_FALLBACK_COPY);
   });
 });

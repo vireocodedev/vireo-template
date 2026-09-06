@@ -29,9 +29,30 @@ export type AppPageHomeViewProps = {
 };
 
 const LOADING_ITEMS: readonly Item[] = [
-  { description: "", id: -1, name: "Loading inventory item", quantity: 0, status: "ACTIVE" },
-  { description: "", id: -2, name: "Loading inventory item", quantity: 0, status: "DRAFT" },
-  { description: "", id: -3, name: "Loading inventory item", quantity: 10, status: "ACTIVE" },
+  {
+    description: "",
+    id: "00000000-0000-4000-8000-000000000001",
+    version: 0,
+    name: "Loading inventory item",
+    quantity: 0,
+    status: "ACTIVE",
+  },
+  {
+    description: "",
+    id: "00000000-0000-4000-8000-000000000002",
+    version: 0,
+    name: "Loading inventory item",
+    quantity: 0,
+    status: "DRAFT",
+  },
+  {
+    description: "",
+    id: "00000000-0000-4000-8000-000000000003",
+    version: 0,
+    name: "Loading inventory item",
+    quantity: 10,
+    status: "ACTIVE",
+  },
 ];
 
 function contentLeaf(loading: boolean, loadingVisible: boolean, content: React.ReactNode) {

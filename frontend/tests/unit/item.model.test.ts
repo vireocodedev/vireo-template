@@ -13,14 +13,16 @@ describe("item contracts", () => {
   it("accepts a complete item form value", () => {
     expect(
       validatedSchema(AppFormMode.enum.CREATE).parse({
-        id: 0,
+        id: "00000000-0000-4000-8000-000000000201",
+        version: 0,
         name: "Design system audit",
         description: "Review Vireo usage.",
         quantity: 2,
         status: "ACTIVE",
       }),
     ).toEqual({
-      id: 0,
+      id: "00000000-0000-4000-8000-000000000201",
+      version: 0,
       name: "Design system audit",
       description: "Review Vireo usage.",
       quantity: 2,
@@ -31,7 +33,8 @@ describe("item contracts", () => {
   it("rejects invalid quantities before an API request", () => {
     expect(() =>
       validatedSchema(AppFormMode.enum.UPDATE).parse({
-        id: 0,
+        id: "00000000-0000-4000-8000-000000000202",
+        version: 0,
         name: "Audit",
         description: "",
         quantity: -1,
@@ -43,7 +46,8 @@ describe("item contracts", () => {
   it.each([AppFormMode.enum.CREATE, AppFormMode.enum.UPDATE])("applies editable name validation in %s mode", mode => {
     expect(() =>
       validatedSchema(mode).parse({
-        id: 0,
+        id: "00000000-0000-4000-8000-000000000203",
+        version: 0,
         name: "x",
         description: "",
         quantity: 0,
@@ -55,7 +59,8 @@ describe("item contracts", () => {
   it("uses validation context parameters when constructing editable schemas", () => {
     expect(() =>
       validatedSchema(AppFormMode.enum.CREATE, 5).parse({
-        id: 0,
+        id: "00000000-0000-4000-8000-000000000204",
+        version: 0,
         name: "four",
         description: "",
         quantity: 0,
@@ -67,7 +72,8 @@ describe("item contracts", () => {
   it("accepts structurally valid legacy names in READ mode", () => {
     expect(
       validatedSchema(AppFormMode.enum.READ, 20).parse({
-        id: 1,
+        id: "00000000-0000-4000-8000-000000000205",
+        version: 0,
         name: "x",
         description: "",
         quantity: 0,
@@ -78,7 +84,8 @@ describe("item contracts", () => {
 
   it("normalizes nullable API descriptions", () => {
     const item = Item.parse({
-      id: 1,
+      id: "00000000-0000-4000-8000-000000000206",
+      version: 0,
       name: "Audit",
       description: null,
       quantity: 0,

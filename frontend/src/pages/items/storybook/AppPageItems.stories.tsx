@@ -12,21 +12,24 @@ type ItemsStoryState = "loaded" | "loading" | "refreshing" | "refresh-error" | "
 
 const items: Item[] = [
   {
-    id: 1,
+    id: "00000000-0000-4000-8000-000000000021",
+    version: 0,
     name: "Design system audit",
     description: "Review the application against current Vireo contracts.",
     quantity: 4,
     status: "ACTIVE",
   },
   {
-    id: 2,
+    id: "00000000-0000-4000-8000-000000000022",
+    version: 0,
     name: "Offline workflow",
     description: "Verify retained content after reconnecting.",
     quantity: 2,
     status: "DRAFT",
   },
   {
-    id: 3,
+    id: "00000000-0000-4000-8000-000000000023",
+    version: 0,
     name: "Legacy cleanup",
     description: "Remove the final compatibility component.",
     quantity: 0,

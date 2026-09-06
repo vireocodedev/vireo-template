@@ -5,6 +5,7 @@ import { defineConfig, normalizePath, searchForWorkspaceRoot } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { APP_IDENTITY, PWA_POLICY, createPwaManifest } from "./pwa-policy.mjs";
 import { transformAppIdentityHtml } from "./scripts/app-identity-html.mjs";
+import { signalsReactTransform } from "./config/signals-react-transform.ts";
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const USE_LOCAL_STARTER_DIST = process.env.USE_LOCAL_STARTER === "true";
@@ -184,6 +185,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    signalsReactTransform(),
     appIdentityHtmlPlugin,
     ...(!IS_STORYBOOK
       ? [
@@ -219,6 +221,7 @@ export default defineConfig({
       "@mui/icons-material",
       "@mui/material",
       "@mui/x-date-pickers",
+      "@preact/signals-react",
       "@tanstack/react-form",
       "@tanstack/react-query",
       "@tanstack/react-virtual",
@@ -232,6 +235,10 @@ export default defineConfig({
     ],
   },
   server: {
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
     ...(USE_LOCAL_STARTER
       ? {
           fs: {

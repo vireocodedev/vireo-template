@@ -1,5 +1,7 @@
 package com.vireocode.startertemplate.config;
 
+import java.util.UUID;
+
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -66,6 +68,7 @@ public class DevBootstrapConfig {
 
     private static Item item(String name, String description, int quantity, ItemStatus status) {
         Item item = new Item();
+        item.setId(UUID.randomUUID());
         item.setName(name);
         item.setDescription(description);
         item.setQuantity(quantity);

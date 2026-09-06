@@ -73,6 +73,32 @@ files, or ejected capabilities. No dependency, JVM, schema, Flyway, or lockfile
 change is required. Review the dry run and accept application-owned work only when
 you have separately chosen it for the product.
 
+## Application-owned SSE proxy migration
+
+When adopting the offline heartbeat functionality, update the application-owned
+`frontend/nginx.conf` manually. `vireo upgrade` will not overwrite deployment
+configuration. Add an exact route before the general `/api/` route:
+
+```nginx
+location = /api/offline/heartbeat/stream {
+    proxy_pass http://app:8080;
+    proxy_http_version 1.1;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_set_header Connection "";
+    proxy_read_timeout 60s;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+`corepack npm run pwa:check:source` reports each missing directive. Complete this
+manual step before treating a future managed upgrade that includes the SSE checker
+as finished; that release's upgrade edge must list it as pending application-owned
+work.
+
 ## Historical 0.8.4 to 0.8.6 migration
 
 This edge transactionally migrates managed `.vireo/example-manifest.json`

@@ -45,7 +45,7 @@ export function replaceItemInSearchQueries(queryClient: QueryClient, item: Item)
   );
 }
 
-export function removeItemFromSearchQueries(queryClient: QueryClient, itemId: number): void {
+export function removeItemFromSearchQueries(queryClient: QueryClient, itemId: string): void {
   queryClient.setQueriesData({ queryKey: ItemQueryKeys.all }, data => {
     if (isPage(data)) {
       if (!data.content.some(item => item.id === itemId)) return data;

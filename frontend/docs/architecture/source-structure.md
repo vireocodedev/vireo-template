@@ -21,9 +21,11 @@ app/
 ├── app.localization.ts
 ├── app.pages.ts
 ├── app.providers.tsx
+├── init-signal-effects.ts   global signal-effect initialization
 ├── config/
 ├── data/network/
 ├── data/query/
+├── diagnostics/             application-wide technical error reporting
 ├── shell/{components,contexts,hooks,layout,providers}/
 └── ui/{assets,forms,localization,preferences,theme}/
 ```
@@ -45,6 +47,7 @@ features/<feature>/
 ├── offline/
 ├── providers/
 ├── services/
+├── signals/                signal definitions only
 ├── state/
 ├── storybook/              feature-level fixtures and stories when separation is clearer
 └── tests/                  feature-local test support when it is not a repository-level test
@@ -57,3 +60,5 @@ Entity form-field components live at `features/<feature>/components/forms/<Entit
 Pages use kebab-case route directories. The route component lives directly in the page directory; private collaborators live in `internal/`. Pages do not export `public.ts` and never import other pages. Dev-tool page examples may mirror feature structure locally, without a nested `src/` directory.
 
 File names are PascalCase for React components, contexts, providers, and model contracts; hooks start with `use`; non-React modules use descriptive kebab-case suffixes such as `.api`, `.query`, and `.localization`.
+
+Global reactive state uses Preact Signals. Signal definitions live in a `signals/` directory, are named `sig<Name>.ts`, and export signals only. Put mutations in typed action modules, and initialize global effects once from `app/init-signal-effects.ts` before React renders in `main.tsx`.

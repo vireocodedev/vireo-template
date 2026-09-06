@@ -54,10 +54,12 @@ cases and the single-sample accessibility, best-practices, and timing hard-cap
 failures before the browser audit runs.
 
 The existing production build also limits the largest JavaScript chunk to 700 KiB
-and total JavaScript to 2,400 KiB before compression. These are regression budgets
-for the unmodified canonical Template, not field-performance or application-page
-promises. Network proximity, deployment compression/CDN behavior, application data,
-third-party code, and device capability remain application/deployment variables.
+and total JavaScript to 2,500 KiB before compression. The total includes the offline
+showcase's separately loaded application SQLite Worker and WASM bootstrap. These are
+regression budgets for the unmodified canonical Template, not field-performance or
+application-page promises. Network proximity, deployment compression/CDN behavior,
+application data, third-party code, and device capability remain
+application/deployment variables.
 
 Physical low-end and real-user field measurements remain open manual evidence in
 the [platform checklist](manual-platform-checklist.md).
@@ -68,19 +70,20 @@ the [platform checklist](manual-platform-checklist.md).
 | ----------------- | ---------------: | ---------------: | ----------: | ----------: |
 | Public contract   |              5 s |             10 s |     256 MiB |     512 MiB |
 | Frontend contract |            180 s |            240 s |       6 GiB |       8 GiB |
-| Browser smoke     |            110 s |            150 s |       3 GiB |       4 GiB |
+| Browser smoke     |            110 s |            270 s |       3 GiB |       4 GiB |
 | JVM build         |             90 s |            120 s |     1.5 GiB |       2 GiB |
 | Container context |              5 s |             10 s |     256 MiB |     512 MiB |
-| Complete gate     |            300 s |            420 s |       6 GiB |       8 GiB |
+| Complete gate     |            300 s |            620 s |       6 GiB |       8 GiB |
 
 The 2026-09-01 five-run review replaces every stage and complete-gate baseline with
 the five-run median, including a complete-gate baseline of 230.245 seconds
 and 2.65 GiB peak RSS; the frontend-contract baseline is 166.632 seconds and 2.65
-GiB peak RSS. Warning and failure thresholds remain unchanged because every sampled
-canonical-host run was clean. A warning keeps the gate green but requires review
-before release; a failure threshold fails the gate. The browser duration threshold
-retains the existing allowance for cold backend assembly and Playwright startup. See
-[`docs/verification-trend-review-2026-09-01.md`](verification-trend-review-2026-09-01.md).
+GiB peak RSS. The browser and complete-gate failure limits have a temporary exception
+for the expanded offline/SSE browser suite; their baselines and warning limits remain
+unchanged until five successful comparable runs exist. A warning keeps the gate green
+but requires review before release; a failure threshold fails the gate. See the
+[`2026-09-06 budget exception`](verification-budget-exception-2026-09-06.md) and the
+[`2026-09-01 trend review`](verification-trend-review-2026-09-01.md).
 
 ## Baseline review and exceptions
 

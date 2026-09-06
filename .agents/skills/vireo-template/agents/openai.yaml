@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vireo Template"
+  short_description: "Route Template maintainer lifecycle work"
+  default_prompt: "Use $vireo-template to select the Template maintainer mode, inspect scope and ownership, and report an evidence-backed outcome."

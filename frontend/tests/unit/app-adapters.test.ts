@@ -39,13 +39,15 @@ describe("application adapter composition", () => {
     expect(page.totalElements).toBe(1);
 
     const created = await adapters.items.create({
-      id: 0,
+      id: "00000000-0000-4000-8000-000000000121",
+      version: 0,
       name: "Frontend-owned adapter",
       description: "Company API boundary",
       quantity: 2,
       status: "DRAFT",
     });
-    expect(created.id).toBeGreaterThan(0);
-    await expect(adapters.history.find(z.any() as never, "ITEM", created.id)).resolves.toEqual([]);
+    expect(created).toMatchObject({ persistence: "SAVED" });
+    expect(created.value.id).toMatch(/^00000000|^[0-9a-f]{8}-/u);
+    await expect(adapters.history.find(z.any() as never, "ITEM", created.value.id)).resolves.toEqual([]);
   });
 });

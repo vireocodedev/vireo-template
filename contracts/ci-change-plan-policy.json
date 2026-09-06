@@ -41,7 +41,7 @@
         "frontend/.prettierrc",
         "frontend/AGENTS.md"
       ],
-      "pathPrefixes": ["frontend/src/", "frontend/public/", "frontend/tests/", "frontend/scripts/", "frontend/.storybook/"],
+      "pathPrefixes": ["frontend/src/", "frontend/public/", "frontend/tests/", "frontend/scripts/", "frontend/config/", "frontend/.storybook/"],
       "patterns": ["^frontend/(?:[^/]+\\.(?:[cm]?[jt]s|tsx|json|css|html)|Dockerfile|nginx\\.conf)$"]
     },
     "jvm": {
@@ -76,7 +76,7 @@
         "frontend/.prettierrc",
         "frontend/AGENTS.md"
       ],
-      "pathPrefixes": ["src/", "frontend/src/", "frontend/public/", "frontend/tests/", "frontend/scripts/", "frontend/.storybook/", "deploy/", "contracts/", ".vireo/", ".agents/"],
+      "pathPrefixes": ["src/", "frontend/src/", "frontend/public/", "frontend/tests/", "frontend/scripts/", "frontend/config/", "frontend/.storybook/", "deploy/", "contracts/", ".vireo/", ".agents/"],
       "patterns": [
         "^frontend/(?:[^/]+\\.(?:[cm]?[jt]s|tsx|json|css|html)|Dockerfile|nginx\\.conf)$",
         "^scripts/(?!ci-change-plan(?:-coverage)?(?:\\.test)?\\.mjs$).+",
@@ -98,7 +98,7 @@
         "frontend/package-lock.json",
         "frontend/.dockerignore"
       ],
-      "pathPrefixes": ["src/main/", "frontend/src/", "frontend/public/", "deploy/"],
+      "pathPrefixes": ["src/main/", "frontend/src/", "frontend/public/", "frontend/config/", "deploy/"],
       "patterns": ["^frontend/(?:[^/]+\\.(?:[cm]?[jt]s|tsx|json|css|html)|Dockerfile|nginx\\.conf)$", "^scripts/(?:verify-deployment|container-context-policy|deployment-contract|compose-database-contract|backend-healthcheck).*"]
     },
     "codeqlJava": {
@@ -106,7 +106,7 @@
       "pathPrefixes": ["src/main/java/", "src/test/java/", "gradle/"]
     },
     "codeqlJavaScript": {
-      "pathPrefixes": ["frontend/src/", "frontend/tests/", "frontend/scripts/", "frontend/.storybook/"],
+      "pathPrefixes": ["frontend/src/", "frontend/tests/", "frontend/scripts/", "frontend/config/", "frontend/.storybook/"],
       "patterns": ["^frontend/[^/]+\\.(?:[cm]?[jt]s|tsx)$", "^scripts/.*\\.(?:[cm]?[jt]s|tsx)$"]
     },
     "dependencyReview": {
