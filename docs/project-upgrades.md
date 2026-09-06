@@ -12,9 +12,9 @@ The public graph retains the historical 0.2.0-to-0.3.0, 0.6.0-to-0.7.0,
 and historical 0.8.3-to-0.8.4 transform. The 0.8.4-to-0.8.5 record is
 superseded Template-only evidence, rather than a consumer upgrade path: no paired
 public `create-vireo@0.8.5` release existed. The 0.8.4-to-0.8.6 edge is retained
-as historical evidence. The supported adjacent edge is 0.8.7-to-0.9.0. Releases
+as historical evidence. The supported adjacent edge is 0.9.0-to-0.9.1. Releases
 0.4 and 0.5 are historical/EOL: they are not retroactively admitted as upgrade
-sources. The 0.9.0 release is terminal until a later release declares its own
+sources. The 0.9.1 release is terminal until a later release declares its own
 adjacent edge.
 
 Start with a read-only inventory. It reports the recorded CLI and Template revision,
@@ -22,13 +22,13 @@ the next declared hop, managed-file drift, pending application-owned work, and
 generated capabilities that remain managed or have been ejected:
 
 ```bash
-npx --yes --package=create-vireo@0.9.0 vireo status --project .
+npx --yes --package=create-vireo@0.9.1 vireo status --project .
 ```
 
 For a 0.8.6-created application, use the target CLI and review the non-writing plan:
 
 ```bash
-npx --yes --package=create-vireo@0.9.0 vireo upgrade --to 0.9.0 --dry-run
+npx --yes --package=create-vireo@0.9.1 vireo upgrade --to 0.9.1 --dry-run
 ```
 
 The CLI updates only the declared managed edge. It refuses unknown Template commits
@@ -44,7 +44,7 @@ Start from a clean branch and create a recoverable database backup. Install or i
 the target CLI version, then review the non-writing plan:
 
 ```bash
-npx --yes --package=create-vireo@0.9.0 vireo upgrade --to 0.9.0 --dry-run
+npx --yes --package=create-vireo@0.9.1 vireo upgrade --to 0.9.1 --dry-run
 ```
 
 The plan distinguishes Vireo-managed edits from required application-owned work.
@@ -52,7 +52,7 @@ After reviewing the target Template diff and all affected changelogs, apply only
 managed migration:
 
 ```bash
-npx --yes --package=create-vireo@0.9.0 vireo upgrade --to 0.9.0 \
+npx --yes --package=create-vireo@0.9.1 vireo upgrade --to 0.9.1 \
   --apply --accept-application-owned
 ```
 
