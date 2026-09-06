@@ -124,6 +124,15 @@ function git(args, options = {}) {
   return execFileSync("git", args, { encoding: "utf8", ...options }).trim();
 }
 
+// Verifying the frontend (via `npm run build`'s `prebuild` hook) always flips
+// this file between local-starter and published TypeScript project references
+// as a side effect of building against the published Starter packages. That
+// toggle is transient CI/dev tooling state, never a release output, so restore
+// it to the base commit before treating the working tree as the release diff.
+function resetTransientBuildToggles(baseCommit) {
+  git(["checkout", baseCommit, "--", "frontend/tsconfig.json"]);
+}
+
 function gitBytes(args, options = {}) {
   return Buffer.from(execFileSync("git", args, options));
 }
@@ -161,6 +170,7 @@ function writeWorkingTree(baseCommit) {
 function writeEvidence({ output, baseCommit, input }) {
   if (git(["rev-parse", "HEAD"]) !== baseCommit)
     throw new Error("release preparation evidence must be created from the exact checked-out main commit");
+  resetTransientBuildToggles(baseCommit);
   const paths = assertGeneratedReleasePaths(completeWorkingTreePaths({ baseCommit }));
   const tree = writeWorkingTree(baseCommit);
   const pullRequest = createPreparationPullRequest({ input, baseCommit, tree });
@@ -181,6 +191,7 @@ function assertEvidence({ evidencePath, baseCommit, input }) {
 }
 
 function assertWorkingTree({ baseCommit, expectedTree }) {
+  resetTransientBuildToggles(baseCommit);
   assertGeneratedReleasePaths(completeWorkingTreePaths({ baseCommit }));
   const tree = writeWorkingTree(baseCommit);
   if (tree !== expectedTree) throw new Error("prepared patch tree differs from the fully verified release tree");
@@ -212,6 +223,7 @@ function main() {
   }
   if (command === "assert-generated-paths") {
     if (!options.base_commit) throw new Error("assert-generated-paths requires --base-commit");
+    resetTransientBuildToggles(options.base_commit);
     assertGeneratedReleasePaths(completeWorkingTreePaths({ baseCommit: options.base_commit }));
     return;
   }
