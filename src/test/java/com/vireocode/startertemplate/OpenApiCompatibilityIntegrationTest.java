@@ -73,8 +73,8 @@ class OpenApiCompatibilityIntegrationTest {
 
         assertOperationsRetainBaseline(generatedOperations, reviewedOperations);
         assertSchemaNamesRetainBaseline(
-                List.of("ItemDTO", "PurchaseOrderDTO"),
-                List.of("ItemDTO"));
+                List.of("ItemResponse", "PurchaseOrderDTO"),
+                List.of("ItemResponse"));
     }
 
     @Test
@@ -85,7 +85,7 @@ class OpenApiCompatibilityIntegrationTest {
 
         assertThatThrownBy(() -> assertOperationsRetainBaseline(Map.of(), reviewedOperations))
                 .isInstanceOf(AssertionError.class);
-        assertThatThrownBy(() -> assertSchemaNamesRetainBaseline(List.of(), List.of("ItemDTO")))
+        assertThatThrownBy(() -> assertSchemaNamesRetainBaseline(List.of(), List.of("ItemResponse")))
                 .isInstanceOf(AssertionError.class);
     }
 

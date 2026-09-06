@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -94,19 +94,18 @@ class ItemApiIntegrationTest {
                 .andExpect(jsonPath("$.content[0].id").value(created.getId().toString()))
                 .andExpect(jsonPath("$.content[0].status").value("DRAFT"));
 
-        mockMvc.perform(put("/api/items/{id}", created.getId())
+        mockMvc.perform(patch("/api/items/{id}", created.getId())
                 .with(csrf())
                 .contentType("application/json")
                 .content("""
                         {
-                          "id": "%s",
                           "name": "Lifecycle proof updated",
                           "description": null,
                           "quantity": 8,
                           "status": "ACTIVE",
                           "version": %d
                         }
-                        """.formatted(created.getId(), created.getVersion())))
+                        """.formatted(created.getVersion())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(created.getId().toString()))
                 .andExpect(jsonPath("$.version").value(1))
@@ -161,22 +160,50 @@ class ItemApiIntegrationTest {
         item.setStatus(ItemStatus.ACTIVE);
         items.saveAndFlush(item);
 
-        mockMvc.perform(put("/api/items/{id}", id)
+        mockMvc.perform(patch("/api/items/{id}", id)
                 .with(csrf())
                 .contentType("application/json")
                 .content("""
                         {
-                          "id": "%s",
                           "name": "Stale overwrite",
                           "description": null,
                           "quantity": 4,
                           "status": "ACTIVE",
                           "version": 99
                         }
-                        """.formatted(id)))
+                        """))
                 .andExpect(status().isConflict());
 
         assertThat(items.findById(id).orElseThrow().getName()).isEqualTo("Version proof");
+    }
+
+    @Test
+    @WithMockUser(roles = "SUPERADMIN")
+    @DisplayName("Item PATCH retains omitted fields and clears an explicitly null description")
+    void patchUsesJsonNullablePresence() throws Exception {
+        UUID id = UUID.randomUUID();
+        Item item = new Item();
+        item.setId(id);
+        item.setName("Partial update proof");
+        item.setDescription("Will be cleared");
+        item.setQuantity(5);
+        item.setStatus(ItemStatus.DRAFT);
+        items.saveAndFlush(item);
+
+        mockMvc.perform(patch("/api/items/{id}", id)
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                        {
+                          "version": 0,
+                          "description": null
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").doesNotExist())
+                .andExpect(jsonPath("$.name").value("Partial update proof"))
+                .andExpect(jsonPath("$.quantity").value(5))
+                .andExpect(jsonPath("$.version").value(1));
     }
 
     @Test

@@ -1,0 +1,16 @@
+# Verify mode
+
+**Input:** exact diff/revision, acceptance criteria, profiles, published/local baseline, available environment, and authorization for commands/side effects. Apply the [common workflow](./workflow.md).
+
+1. Inventory evidence already available and gaps. Read current [root scripts](../../../../package.json), [frontend scripts](../../../../frontend/package.json), [Template verification entry point](../../../../scripts/verify-template.sh), and [application verification entry point](../../../../scripts/verify.sh) before selecting commands. Read the corresponding script bodies/configuration; derive versions and selectors from the checkout rather than a saved command list.
+2. Map each affected boundary to the nearest focused test/policy, then identify broader needs: source contracts, frontend/JVM behavior, projection fixtures, published-dependency clean consumers in both profiles, deployment smoke, and manual/platform evidence. [CI routing](../../../../contracts/ci-change-plan-policy.json) determines CI lanes; it does not replace projection classification or prove behavior by itself.
+3. State the proposed scope, process/resource needs, network/install effects, temporary artifacts, data targets, and cleanup. With no execution approval, or an explicit no-tests/builds/installs restriction, stop at the plan and static inspection. Do not invoke a script that transitively violates the restriction.
+4. When authorized, run focused checks first. Coordinate the workstation-wide budget and other workers before full suites; run full suites sequentially across repositories and preserve the checked-in pipeline's stage order. Consult [verification performance](../../../../docs/verification-performance.md) and [budget policy](../../../../contracts/verification-budget-policy.json). Do not launch duplicate watchers, competing browser/JVM builds, or parallel “independent” full suites.
+5. Stop dependent checks on a failed prerequisite. Record actual command, environment, revision/worktree state, profile, dependency mode, exit/result, and evidence path. Diagnose environment failures separately without pretending tests passed or switching dependencies unasked. Restore only task-owned temporary state, even on failure.
+6. Report coverage precisely. A Template source check is not generated-app proof; both-profile create-vireo/clean-consumer fixtures require the authorized owning checkout/tooling and exact target. If unavailable, report pending framework coordination. Compare [platform evidence](../../../../docs/platform-support-evidence.md) and [manual checklist](../../../../docs/manual-platform-checklist.md); automated coverage cannot close physical-device/manual gaps.
+
+**Outcome:** an evidence table of checks actually run, failed, skipped, and pending, with source/public/local distinctions and a bounded conclusion.
+
+**Stop:** no gate weakening, budget waivers, data cleanup, dependency installation, provider access, or framework writes are implied by verify mode. Escalate destructive or external steps to their approval boundary.
+
+**Receipt:** use the [standard finish receipt](./workflow.md#finish-receipt). Static inspection, planned commands, prior CI, and fresh execution must remain separate entries.

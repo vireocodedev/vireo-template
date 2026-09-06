@@ -12,7 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import com.vireocode.startertemplate.app.item.ItemDTO;
+import com.vireocode.startertemplate.app.item.ItemResponse;
 import com.vireocode.startertemplate.app.item.ItemStatus;
 import com.vireocode.vireo.offline.OfflineHeartbeatService;
 import com.vireocode.vireo.spi.OfflineChangeBroadcaster;
@@ -26,7 +26,7 @@ class AppOfflineConfigurationTest {
         OfflineChangeBroadcaster broadcaster = new AppOfflineConfiguration().appOfflineChangeBroadcaster(heartbeat);
         UUID itemId = UUID.randomUUID();
 
-        broadcaster.publishUpdateEvent("Item", new ItemDTO(itemId, "Name", "Description", 1,
+        broadcaster.publishUpdateEvent("Item", new ItemResponse(itemId, "Name", "Description", 1,
                 ItemStatus.ACTIVE, 4L), 9L);
 
         ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);
@@ -41,7 +41,7 @@ class AppOfflineConfigurationTest {
         OfflineChangeBroadcaster broadcaster = new AppOfflineConfiguration().appOfflineChangeBroadcaster(heartbeat);
         UUID itemId = UUID.randomUUID();
 
-        broadcaster.publishDeleteEvent("Item", new ItemDTO(itemId, "Name", "Description", 1,
+        broadcaster.publishDeleteEvent("Item", new ItemResponse(itemId, "Name", "Description", 1,
                 ItemStatus.ACTIVE, 4L), 9L);
 
         ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);

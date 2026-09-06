@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vireo App"
+  short_description: "Route everyday Vireo application work"
+  default_prompt: "Use $vireo-app to select a workflow for this application request and respect its scope."

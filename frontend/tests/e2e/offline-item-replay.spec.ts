@@ -323,10 +323,16 @@ test("a rejected offline deletion returns as an actionable conflict", async ({ p
         .find(cookie => cookie.startsWith("XSRF-TOKEN="))
         ?.slice("XSRF-TOKEN=".length);
       const response = await fetch(`/api/items/${value.id}`, {
-        body: JSON.stringify(value),
+        body: JSON.stringify({
+          version: value.version,
+          name: value.name,
+          description: value.description,
+          quantity: value.quantity,
+          status: value.status,
+        }),
         credentials: "include",
         headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": decodeURIComponent(csrfToken ?? "") },
-        method: "PUT",
+        method: "PATCH",
       });
       return { body: await response.text(), ok: response.ok, status: response.status };
     },

@@ -101,21 +101,77 @@ class ItemOfflineReplayHandlerIntegrationTest {
         item.setStatus(ItemStatus.ACTIVE);
         items.saveAndFlush(item);
 
-        OfflineSyncCommandResultDto result = handler.process(command("PUT", "/api/items/" + itemId, """
+        OfflineSyncCommandResultDto result = handler.process(command("PATCH", "/api/items/" + itemId, """
                 {
-                  "id": "%s",
                   "name": "Stale Item",
                   "description": null,
                   "quantity": 3,
                   "status": "ACTIVE",
                   "version": 99
                 }
-                """.formatted(itemId)));
+                """));
 
         assertThat(result.success()).isFalse();
         assertThat(result.status()).isEqualTo(409);
         assertThat(result.reason()).isEqualTo(OfflineSyncResultReason.REJECTED);
         assertThat(items.findById(itemId).orElseThrow().getName()).isEqualTo("Current Item");
+    }
+
+    @Test
+    @WithMockUser(roles = "SUPERADMIN")
+    @DisplayName("replay validates PATCH requests before classifying idempotent state")
+    void patchValidationPrecedesIdempotencyClassification() throws Exception {
+        UUID itemId = UUID.randomUUID();
+        Item item = new Item();
+        item.setId(itemId);
+        item.setName("Current Item");
+        item.setQuantity(1);
+        item.setStatus(ItemStatus.ACTIVE);
+        items.saveAndFlush(item);
+
+        OfflineSyncCommandResultDto missingVersion = handler.process(command("PATCH", "/api/items/" + itemId,
+                "{ \"name\": \"Ignored\" }"));
+        OfflineSyncCommandResultDto emptyPatch = handler.process(command("PATCH", "/api/items/" + itemId,
+                "{ \"version\": 0 }"));
+        OfflineSyncCommandResultDto applied = handler.process(command("PATCH", "/api/items/" + itemId,
+                "{ \"version\": 0, \"name\": \"Applied once\" }"));
+        OfflineSyncCommandResultDto repeated = handler.process(command("PATCH", "/api/items/" + itemId,
+                "{ \"version\": 0, \"name\": \"Applied once\" }"));
+
+        assertThat(missingVersion.status()).isEqualTo(400);
+        assertThat(missingVersion.reason()).isEqualTo(OfflineSyncResultReason.REJECTED);
+        assertThat(emptyPatch.status()).isEqualTo(400);
+        assertThat(emptyPatch.reason()).isEqualTo(OfflineSyncResultReason.REJECTED);
+        assertThat(applied.reason()).isEqualTo(OfflineSyncResultReason.APPLIED);
+        assertThat(repeated.reason()).isEqualTo(OfflineSyncResultReason.ALREADY_APPLIED);
+        assertThat(items.findById(itemId).orElseThrow().getVersion()).isEqualTo(1L);
+    }
+
+    @Test
+    @WithMockUser(roles = "SUPERADMIN")
+    @DisplayName("replay validates a delete version before classifying an absent Item as applied")
+    void deleteValidationPrecedesAbsentClassification() throws Exception {
+        OfflineSyncCommandResultDto result = handler.process(command("DELETE", "/api/items/" + UUID.randomUUID(), "{}"));
+
+        assertThat(result.status()).isEqualTo(400);
+        assertThat(result.reason()).isEqualTo(OfflineSyncResultReason.REJECTED);
+    }
+
+    @Test
+    @WithMockUser(roles = "SUPERADMIN")
+    @DisplayName("replay permanently rejects malformed create PATCH and delete bodies")
+    void malformedBodiesArePermanentRejections() throws Exception {
+        UUID itemId = UUID.randomUUID();
+        OfflineSyncCommandResultDto malformedCreate = handler.process(command("POST", "/api/items", "[]"));
+        OfflineSyncCommandResultDto malformedPatch = handler.process(command("PATCH", "/api/items/" + itemId, "[]"));
+        OfflineSyncCommandResultDto malformedDelete = handler.process(command("DELETE", "/api/items/" + itemId, "[]"));
+
+        assertThat(malformedCreate.status()).isEqualTo(422);
+        assertThat(malformedPatch.status()).isEqualTo(422);
+        assertThat(malformedDelete.status()).isEqualTo(422);
+        assertThat(malformedCreate.reason()).isEqualTo(OfflineSyncResultReason.REJECTED);
+        assertThat(malformedPatch.reason()).isEqualTo(OfflineSyncResultReason.REJECTED);
+        assertThat(malformedDelete.reason()).isEqualTo(OfflineSyncResultReason.REJECTED);
     }
 
     @Test
@@ -157,8 +213,7 @@ class ItemOfflineReplayHandlerIntegrationTest {
                   "name": "Local item wins",
                   "description": "Restored during replay",
                   "quantity": 7,
-                  "status": "ACTIVE",
-                  "version": 0
+                  "status": "ACTIVE"
                 }
                 """.formatted(itemId)));
 

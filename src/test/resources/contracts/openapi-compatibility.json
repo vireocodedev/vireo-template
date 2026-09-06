@@ -78,7 +78,7 @@
     },
     "POST /api/items": {
       "responses": ["201", "400", "401", "403", "409", "500"],
-      "request": "ItemDTO",
+      "request": "ItemCreateRequest",
       "security": ["csrfToken", "sessionCookie"]
     },
     "POST /api/items/search": {
@@ -101,9 +101,9 @@
       "request": "SavedFilterDTO",
       "security": ["csrfToken", "sessionCookie"]
     },
-    "PUT /api/items/{id}": {
+    "PATCH /api/items/{id}": {
       "responses": ["200", "400", "401", "403", "409", "500"],
-      "request": "ItemDTO",
+      "request": "ItemPatchRequest",
       "security": ["csrfToken", "sessionCookie"]
     }
   },
@@ -116,13 +116,15 @@
     "CurrentUserResponse",
     "HistoryActor",
     "HistoryRecord",
-    "ItemDTO",
+    "ItemCreateRequest",
     "ItemDeleteRequest",
+    "ItemPatchRequest",
+    "ItemResponse",
     "JsonNode",
     "LoginRequest",
     "LoginResponse",
     "PageableObject",
-    "PageItemDTO",
+    "PageItemResponse",
     "PageSavedFilterDTO",
     "QueryEngineEntitiesConfig",
     "QueryEntityDefinition",
@@ -138,18 +140,26 @@
   ],
   "schemas": {
     "ApiError": {
-      "required": [],
-      "properties": ["errors", "message", "status", "timestamp"]
+      "required": ["code", "message", "status", "timestamp"],
+      "properties": ["code", "errors", "message", "status", "timestamp"]
     },
-    "ItemDTO": {
-      "required": ["name", "quantity", "status"],
-      "properties": ["description", "id", "name", "quantity", "status", "version"],
+    "ItemCreateRequest": {
+      "required": ["id", "name", "quantity", "status"],
+      "properties": ["description", "id", "name", "quantity", "status"],
       "constraints": {
         "name.maxLength": 255,
         "description.maxLength": 2000,
         "quantity.minimum": 0,
         "status.enum": ["ACTIVE", "ARCHIVED", "DRAFT"]
       }
+    },
+    "ItemPatchRequest": {
+      "required": ["version"],
+      "properties": ["description", "name", "quantity", "status", "version"]
+    },
+    "ItemResponse": {
+      "required": ["id", "name", "quantity", "status", "version"],
+      "properties": ["description", "id", "name", "quantity", "status", "version"]
     },
     "ItemDeleteRequest": {
       "required": ["version"],

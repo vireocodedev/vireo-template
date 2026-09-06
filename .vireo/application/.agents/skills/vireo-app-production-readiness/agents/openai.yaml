@@ -1,4 +1,4 @@
 interface:
   display_name: "Vireo App Production Readiness"
-  short_description: "Assess Vireo applications for production use"
-  default_prompt: "Use $vireo-app-production-readiness to review this Vireo application for production readiness."
+  short_description: "Assess production evidence, gaps, and ownership"
+  default_prompt: "Use $vireo-app-production-readiness to assess this application's evidence and manual readiness gaps without deploying or changing the environment."

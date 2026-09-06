@@ -1,0 +1,28 @@
+# Change / feature mode
+
+**Input:** an implementation request with observable acceptance criteria and an allowed write scope. Apply the [common workflow](./workflow.md) and [maintainer specialist](../../vireo-template-maintainer/SKILL.md).
+
+1. Inspect one end-to-end existing flow and its nearest tests before proposing code. Complete path/profile classification and determine which pieces belong to the framework, Template, projection tooling, or application adoption.
+2. Select a small behavior slice and regression coverage. Where execution is authorized, use red → green → refactor: prove a new behavior test fails for the intended reason, implement the minimum change, then rerun it. If tests cannot run, label coverage unexecuted; do not claim a red or green result.
+3. Implement only accepted behavior and owned paths, using published APIs. Missing upstream support becomes a handoff, not copied framework internals or an implicit local-mode switch. Generated capability changes follow the schema/generator's supported path; customized managed source requires an explicit ownership decision.
+4. Apply each relevant risk row below; mark unrelated rows not applicable with a reason. Preserve the nearest [frontend](../../../../frontend/AGENTS.md) and [backend](../../../../src/AGENTS.md) policies.
+5. Run only authorized focused checks through [verify mode](./verify.md). Compare the final diff with acceptance criteria, ownership matrix, and new-versus-existing consumer impact; leave release pins unchanged without release intent.
+
+## Regression coverage by affected boundary
+
+| Boundary                  | Preserve and cover                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth/session/CSRF         | Cookie-to-header CSRF and intentional endpoint policy; authentication versus role/object/tenant authorization; expired/anonymous/forbidden paths. Do not disable CSRF to make a client call work.                                                                                                                                                                                                         |
+| Service/API               | Authorization, tenant checks, DTO validation, and business invariants at service boundaries; transport/schema compatibility and invalid input. Generated wiring and UI hiding are not service policy.                                                                                                                                                                                                     |
+| Database                  | Append-only used migrations, runtime versus schema-owner credentials, integrity and recovery. Destructive execution requires the common approval stop.                                                                                                                                                                                                                                                    |
+| Offline owner/lock/replay | Stable-owner isolation; logout/user-switch pending work; identity expiry/role changes; single-tab replay/hydration lock and release on failure; ordered/idempotent replay, backend reauthorization, transient retry versus permanent rejection, version/create/update/delete conflicts, explicit rebase/discard decisions. Keep queue/cache writes atomic and preserve optimistic intent across recovery. |
+| Offline availability      | Heartbeat-driven connectivity, OPFS initialization/failure and honest online-only state, reload and reconnect, hydration ordering, blocked writes during replay, cross-tab ownership. Never clear OPFS/queues just to make tests pass.                                                                                                                                                                    |
+| PWA/UI                    | API traffic stays outside generic caches; service-worker update/reload and hosting headers; accessible names, localization, dark theme, loading/empty/error/disabled states.                                                                                                                                                                                                                              |
+
+Use current [offline behavior](../../../../docs/offline.md), [security threat model](../../../../docs/security-threat-model.md), and [API compatibility](../../../../docs/api-compatibility.md) as the detailed references. Do not expand online-only generated features into offline scope without an explicit design and regression plan.
+
+**Outcome:** the accepted source change plus evidence-backed coverage and consumer adoption notes.
+
+**Stop:** follow the common boundaries when upstream support, classification, data-loss decisions, or execution approval is missing; partial source work remains partial.
+
+**Receipt:** use the [standard finish receipt](./workflow.md#finish-receipt), separating source, public availability, and tested behavior.

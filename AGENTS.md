@@ -1,34 +1,19 @@
 # Vireo Template Maintainers
 
-This repository is the source Template consumed by `create-vireo`. Work here has two audiences: Template maintainers and generated applications. Keep those contracts separate.
+This repository is the source Template consumed by `create-vireo`, not a generated application. Keep maintainer guidance separate from projected application guidance.
 
 ## Routing
 
-- Frontend behavior, PWA, and published/local Starter modes: read `frontend/AGENTS.md`.
-- JVM application code, Flyway, and HTTP boundaries: read `src/AGENTS.md`.
-- launchers, policies, verification, and Template release logic: read `scripts/AGENTS.md`.
-- Creation/projection/upgrade behavior belongs in the adjacent Vireo repository, not in undocumented Template-only conventions.
+- Template plan, change/feature, fix, review, docs, verify, or release/operate: start with [$vireo-template](.agents/skills/vireo-template/SKILL.md). The user-level `$vireo` router owns cross-repository routing; do not duplicate it here.
+- Template source and projection maintenance: the router uses [$vireo-template-maintainer](.agents/skills/vireo-template-maintainer/SKILL.md).
+- Frontend behavior and infrastructure: read [frontend/AGENTS.md](frontend/AGENTS.md).
+- JVM application code, Flyway, and HTTP boundaries: read [src/AGENTS.md](src/AGENTS.md).
+- Launchers, policies, verification, and release logic: read [scripts/AGENTS.md](scripts/AGENTS.md).
 
-## Template-maintainer rules
+The router's [common workflow](.agents/skills/vireo-template/references/workflow.md) owns lifecycle, projection, dependency-mode, approval, and receipt rules. Skill instructions guide behavior; they do not enforce security or replace sandbox, tool permissions, or protected hosted gates.
 
-- Preserve published Starter consumption as the default. Local Starter resolution is explicit integration work.
-- Before adding, moving, or changing a Template file, classify it in the application projection contract: managed, application-owned, optional, substitution-required, or excluded for both profiles.
-- Keep maintainer-only policies, release operations, flagship evidence, and maintainer skills out of generated applications.
-- Application-facing Codex guidance is stored under `.vireo/application/`; it is projected to a generated application's root and becomes application-owned.
-- Use focused checks while editing. Full verification, deployment, release, and external operations need coordination and explicit authorization.
+## Working conventions
 
-Read `docs/generated-capabilities.md`, `docs/project-upgrades.md`, and `docs/local-starter-development.md` for the maintained contracts.
-
-## Agent skills
-
-### Issue tracker
-
-Issues and specs use GitHub Issues. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Triage uses the default Matt Pocock label vocabulary. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Domain documentation uses the single-context layout. See `docs/agents/domain.md`.
+- Issues and specs: [GitHub Issues](docs/agents/issue-tracker.md).
+- Triage: [label vocabulary](docs/agents/triage-labels.md).
+- Domain documentation: [single-context layout](docs/agents/domain.md).

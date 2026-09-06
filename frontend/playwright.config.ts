@@ -6,11 +6,12 @@ const useLocalStarter = process.env.USE_LOCAL_STARTER_SOURCE === "true";
 const browserLane = process.env.VIREO_E2E_BROWSER ?? "chromium";
 const webServerStartupTimeout = 90_000;
 const frontendDevCommand = useLocalStarter ? "corepack npm run dev:local-starter" : "corepack npm run dev";
+const backendGradleCommand = `../gradlew -p .. bootRun${useLocalStarter ? " -PuseLocalStarter=true" : ""} --console=plain`;
 const backendDevCommand =
   process.env.VIREO_E2E_EXTERNAL_DATABASE === "true"
-    ? "../gradlew -p .. bootRun --console=plain"
+    ? backendGradleCommand
     : "SPRING_DATASOURCE_URL='jdbc:h2:mem:startertemplatee2e;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1' " +
-      "SPRING_DATASOURCE_USERNAME=sa SPRING_DATASOURCE_PASSWORD='' ../gradlew -p .. bootRun --console=plain";
+      `SPRING_DATASOURCE_USERNAME=sa SPRING_DATASOURCE_PASSWORD='' ${backendGradleCommand}`;
 
 const projects =
   browserLane === "firefox"

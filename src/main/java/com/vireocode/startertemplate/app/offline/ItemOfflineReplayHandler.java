@@ -9,8 +9,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.vireocode.startertemplate.app.item.Item;
-import com.vireocode.startertemplate.app.item.ItemDTO;
+import com.vireocode.startertemplate.app.item.ItemCreateRequest;
 import com.vireocode.startertemplate.app.item.ItemDeleteRequest;
+import com.vireocode.startertemplate.app.item.ItemPatchRequest;
 import com.vireocode.startertemplate.app.item.ItemService;
 import com.vireocode.startertemplate.app.auth.AppCurrentUser;
 import com.vireocode.vireo.offline.OfflineSyncBodyNormalizer;
@@ -47,7 +48,7 @@ public class ItemOfflineReplayHandler implements OfflineSyncReplayHandler {
         if (method == HttpMethod.POST) {
             return ITEM_COLLECTION_PATH.equals(command.url());
         }
-        return (method == HttpMethod.PUT || method == HttpMethod.DELETE)
+        return (method == HttpMethod.PATCH || method == HttpMethod.DELETE)
                 && ITEM_PATH.matcher(command.url()).matches();
     }
 
@@ -63,8 +64,8 @@ public class ItemOfflineReplayHandler implements OfflineSyncReplayHandler {
                 return replayCreate(command);
             }
             UUID id = itemId(command.url());
-            if (method == HttpMethod.PUT) {
-                return replayUpdate(command, id);
+            if (method == HttpMethod.PATCH) {
+                return replayPatch(command, id);
             }
             if (method == HttpMethod.DELETE) {
                 return replayDelete(command, id);
@@ -82,7 +83,8 @@ public class ItemOfflineReplayHandler implements OfflineSyncReplayHandler {
     }
 
     private OfflineSyncCommandResultDto replayCreate(OfflineSyncCommandDto command) throws Exception {
-        ItemDTO requested = body(command, ItemDTO.class);
+        ItemCreateRequest requested = body(command, ItemCreateRequest.class);
+        items.validateReplayCreate(requested);
         Item existing = requested.id() == null ? null : items.findIncludingDeleted(requested.id()).orElse(null);
         if (existing != null && existing.isDeleted()) {
             items.restore(requested);
@@ -98,25 +100,20 @@ public class ItemOfflineReplayHandler implements OfflineSyncReplayHandler {
         return applied(command, 201);
     }
 
-    private OfflineSyncCommandResultDto replayUpdate(OfflineSyncCommandDto command, UUID id) throws Exception {
-        ItemDTO requested = body(command, ItemDTO.class);
-        if (!id.equals(requested.id())) {
-            return rejected(command, 422, "The queued Item command is invalid.");
-        }
+    private OfflineSyncCommandResultDto replayPatch(OfflineSyncCommandDto command, UUID id) throws Exception {
+        ItemPatchRequest requested = body(command, ItemPatchRequest.class);
+        items.validateReplayPatch(requested);
         Item existing = items.findIncludingDeleted(id).orElse(null);
-        if (existing != null && existing.isDeleted()) {
-            items.restore(requested);
-            return applied(command, 200);
-        }
         if (existing != null && items.matches(existing, requested)) {
             return alreadyApplied(command);
         }
-        items.update(id, requested);
+        items.patch(id, requested);
         return applied(command, 200);
     }
 
     private OfflineSyncCommandResultDto replayDelete(OfflineSyncCommandDto command, UUID id) throws Exception {
         ItemDeleteRequest requested = body(command, ItemDeleteRequest.class);
+        items.validateDeleteVersion(requested.version());
         Item existing = items.findIncludingDeleted(id).orElse(null);
         if (existing == null || existing.isDeleted()) {
             return alreadyApplied(command);
@@ -125,8 +122,16 @@ public class ItemOfflineReplayHandler implements OfflineSyncReplayHandler {
         return applied(command, 204);
     }
 
-    private <T> T body(OfflineSyncCommandDto command, Class<T> type) throws Exception {
-        return OfflineSyncBodyNormalizer.treeToValue(command.body(), objectMapper, type);
+    private <T> T body(OfflineSyncCommandDto command, Class<T> type) {
+        try {
+            T result = OfflineSyncBodyNormalizer.treeToValue(command.body(), objectMapper, type);
+            if (result == null) {
+                throw new IllegalArgumentException("The queued Item command is invalid.");
+            }
+            return result;
+        } catch (Exception exception) {
+            throw new IllegalArgumentException("The queued Item command is invalid.", exception);
+        }
     }
 
     private UUID itemId(String url) {

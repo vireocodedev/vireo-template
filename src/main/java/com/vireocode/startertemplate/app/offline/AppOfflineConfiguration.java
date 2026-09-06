@@ -9,7 +9,7 @@ import org.springframework.core.annotation.Order;
 
 import com.vireocode.startertemplate.app.auth.AppCurrentUser;
 import com.vireocode.startertemplate.app.auth.AppUserRole;
-import com.vireocode.startertemplate.app.item.ItemDTO;
+import com.vireocode.startertemplate.app.item.ItemResponse;
 import com.vireocode.startertemplate.app.item.ItemService;
 import com.vireocode.vireo.offline.OfflineActor;
 import com.vireocode.vireo.offline.OfflineActorResolver;
@@ -81,7 +81,7 @@ public class AppOfflineConfiguration {
         }
 
         private Optional<ItemSsePayload> itemPayload(String entity, Object payload, boolean deleted) {
-            if (!(payload instanceof ItemDTO item) || !"Item".equals(entity)) {
+            if (!(payload instanceof ItemResponse item) || !"Item".equals(entity)) {
                 return Optional.empty();
             }
             Long version = item.version();

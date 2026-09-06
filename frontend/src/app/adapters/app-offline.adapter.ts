@@ -7,14 +7,24 @@ import {
   type ParameterizedSqliteQueryResult,
 } from "@vireocodedev/query";
 import { appAxios } from "@/app/data/network/clients/AppAxiosClient";
-import { configureItemApi, Item, ItemApiOnline, type ItemApi, type ItemFilters } from "@/features/item/public";
+import {
+  configureItemApi,
+  Item,
+  ItemApiOnline,
+  searchItemTransport,
+  toCompleteItemPatchRequest,
+  toItemCreateRequest,
+  type ItemApi,
+  type ItemFilters,
+  type ItemTransport,
+} from "@/features/item/public";
 import { APP_QUERY_ENTITY } from "@/app/data/query/models/AppQueryEntityKey";
 import { serializeQueryFilterDocument } from "@/app/data/query/models/QueryFilterDocument";
 import type { PageableParams, PageableResponse } from "@vireocodedev/infrastructure";
 import {
   offlineItemIdFor,
   rebaseOfflineItemCommands,
-  type AuthoritativeItemVersion,
+  type AuthoritativeItemState,
   type OfflineItemCommand,
 } from "../offline/services/app-offline-rebase";
 import { runOfflineRecovery } from "../offline/services/app-offline-hydration";
@@ -79,7 +89,7 @@ export type AppOfflineCurrentUser = z.infer<typeof CachedCurrentUser>;
 
 export type AppOfflineShowcaseTransport = {
   currentUser: () => Promise<AppOfflineCurrentUser>;
-  searchItems: (pageable: PageableParams, filters: ItemFilters) => Promise<PageableResponse<Item>>;
+  searchItems: (pageable: PageableParams, filters: ItemFilters) => Promise<PageableResponse<ItemTransport>>;
   replay: (commands: Awaited<ReturnType<typeof appOfflineQueue.getBatch>>) => Promise<unknown>;
 };
 
@@ -88,7 +98,7 @@ const httpOfflineShowcaseTransport: AppOfflineShowcaseTransport = {
     const response = await appAxios.get("/app/current-user", { timeout: 8_000 });
     return CachedCurrentUser.parse({ ...response.data, validatedAt: Date.now() });
   },
-  searchItems: (pageable, filters) => new ItemApiOnline().search(pageable, filters),
+  searchItems: searchItemTransport,
   replay: async commands => (await appAxios.post("/offline/sync", { commands }, { timeout: 10_000 })).data,
 };
 
@@ -144,6 +154,16 @@ export function markOfflineCacheUnavailable(error: unknown): void {
 
 function toCached(item: Item, pending = false, conflict = false, deleted = false): CachedItem {
   return { ...item, pending, conflict, deleted };
+}
+
+function hasSameMutableItemState(cached: CachedItem, submitted: Item): boolean {
+  return (
+    cached.version === submitted.version &&
+    cached.name === submitted.name &&
+    cached.description === submitted.description &&
+    cached.quantity === submitted.quantity &&
+    cached.status === submitted.status
+  );
 }
 
 function nextCommandTimestamp(): number {
@@ -278,8 +298,8 @@ async function ensureOfflineOwnerUnlocked(owner: string): Promise<void> {
   await appOfflineTransport.sendWorkerRequest({ type: "ensureOfflineOwner", owner });
 }
 
-async function fetchAuthoritativeItems(): Promise<Item[]> {
-  const remoteItems: Item[] = [];
+async function fetchAuthoritativeItems(): Promise<ItemTransport[]> {
+  const remoteItems: ItemTransport[] = [];
   for (let pageNumber = 0; ; pageNumber += 1) {
     const page = await offlineShowcaseTransport.searchItems(
       { page: pageNumber, rowsPerPage: 100, sortBy: "name", sortDirection: "asc" },
@@ -305,7 +325,7 @@ async function hydrateOfflineItemsUnlocked(): Promise<void> {
     const localChanges = new Map(
       localItems.filter(item => item.pending || item.conflict).map(item => [item.id, item] as const),
     );
-    const merged = remoteItems.map(item => localChanges.get(item.id) ?? toCached(item));
+    const merged = remoteItems.map(item => localChanges.get(item.id) ?? toCached(Item.parse(item)));
     const remoteIds = new Set(remoteItems.map(item => item.id));
     merged.push(...[...localChanges.values()].filter(item => !remoteIds.has(item.id)));
     await appOfflineItems.replace(merged);
@@ -571,19 +591,32 @@ export async function retryOfflineChanges(): Promise<void> {
     async () => {
       await validateLiveOfflineCurrentUserUnlocked();
       const authoritativeItems = await fetchAuthoritativeItems();
-      const authoritativeVersions: AuthoritativeItemVersion[] = authoritativeItems.map(item => ({
+      const authoritativeStates: AuthoritativeItemState[] = authoritativeItems.map(item => ({
         id: item.id,
+        name: item.name,
+        description: item.description,
+        quantity: item.quantity,
+        status: item.status,
         version: item.version,
       }));
+      const cachedItems = await appOfflineItems.list();
       if (appOfflineRuntime.shouldUseInMemoryFallback()) {
         const queued = [...queuedCommandsForInMemoryRetry.values()];
         if (queued.length === 0 && sigSyncSummary.value.failed > 0) {
           throw new Error("Failed offline commands cannot be retried after this tab's in-memory cache was reset.");
         }
         if (queued.length) {
-          const rebased = rebaseOfflineItemCommands(queued, authoritativeVersions);
+          const rebased = rebaseOfflineItemCommands(queued, authoritativeStates, cachedItems);
           await appOfflineQueue.delete(queued.map(command => command.commandId));
           if (rebased.deletedItemIds.length) await appOfflineItems.delete(rebased.deletedItemIds);
+          const deletedIds = new Set(rebased.deletedItemIds);
+          const cachedById = new Map((await appOfflineItems.list()).map(item => [item.id, item] as const));
+          for (const itemId of rebased.affectedItemIds) {
+            const local = cachedById.get(itemId);
+            if (local && !deletedIds.has(itemId)) {
+              await appOfflineItems.upsert({ ...local, conflict: false, pending: false });
+            }
+          }
           for (const command of rebased.commands) {
             const itemId = offlineItemIdFor(command);
             const local = (await appOfflineItems.list()).find(item => item.id === itemId);
@@ -597,7 +630,8 @@ export async function retryOfflineChanges(): Promise<void> {
       } else {
         await appOfflineTransport.sendWorkerRequest({
           type: "rebaseOfflineCommands",
-          authoritativeItems: authoritativeVersions,
+          authoritativeItems: authoritativeStates,
+          cachedItems,
         });
       }
       patchSyncSummary({ error: null, status: SyncStatus.IDLE });
@@ -736,7 +770,7 @@ export class ItemApiOfflineCapable implements ItemApi {
       await applyQueuedItemMutation(local, local.id, {
         method: "POST",
         url: "/api/items",
-        body: { ...value, version: 0 },
+        body: toItemCreateRequest(value),
       });
       return { persistence: "QUEUED" as const, value: local };
     }
@@ -751,8 +785,26 @@ export class ItemApiOfflineCapable implements ItemApi {
       return result;
     } catch (error) {
       if (!canQueueOfflineMutation(error)) throw error;
+      let cached: CachedItem | undefined;
+      if (canUseOfflineStorage()) {
+        try {
+          cached = (await appOfflineItems.list()).find(item => item.id === id);
+        } catch (storageError) {
+          markOfflineStorageUnavailable(storageError);
+        }
+      }
+      if (cached && !cached.deleted && hasSameMutableItemState(cached, value)) {
+        if (cached.pending || cached.conflict) {
+          return { persistence: "QUEUED" as const, value: cached };
+        }
+        return { persistence: "SAVED" as const, value: Item.parse(cached) };
+      }
       const local = toCached({ ...value, id, version: value.version + 1 }, true);
-      await applyQueuedItemMutation(local, id, { method: "PUT", url: `/api/items/${id}`, body: value });
+      await applyQueuedItemMutation(local, id, {
+        method: "PATCH",
+        url: `/api/items/${id}`,
+        body: toCompleteItemPatchRequest(value),
+      });
       return { persistence: "QUEUED" as const, value: local };
     }
   }

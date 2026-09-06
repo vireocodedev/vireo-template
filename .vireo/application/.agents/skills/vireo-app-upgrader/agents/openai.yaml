@@ -1,4 +1,4 @@
 interface:
   display_name: "Vireo App Upgrader"
-  short_description: "Upgrade Vireo consumer applications safely"
-  default_prompt: "Use $vireo-app-upgrader to plan a safe Vireo application upgrade."
+  short_description: "Plan and apply supported consumer upgrade edges"
+  default_prompt: "Use $vireo-app-upgrader to inventory this application and plan an upgrade with an exact target CLI and declared edge before any apply."

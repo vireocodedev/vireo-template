@@ -15,7 +15,7 @@ import type { AppAuthApi } from "@/app/data/network/api/app-auth.api";
 import { AppAuthFailureError } from "@/app/data/network/models/AppAuthFailure";
 import { AuthUser } from "@/app/data/network/models/AuthUser";
 import type { HistoryApi } from "@/features/history/public";
-import { Item, type ItemApi } from "@/features/item/public";
+import { Item, ItemCreateRequest, ItemPatchRequest, type ItemApi } from "@/features/item/public";
 import type { HistoryEntityKind, HistoryRecord, HistorySnapshot, HistoryTimestamp } from "@vireocodedev/history";
 import type { PageableParams, PageableResponse } from "@vireocodedev/infrastructure";
 import { z } from "zod";
@@ -136,6 +136,7 @@ class MockItemApi implements ItemApi {
   async update(id: string, value: Item) {
     const index = this.items.findIndex(item => item.id === id);
     if (index < 0) throw new Error(`Mock item ${id} does not exist.`);
+    if (this.items[index].version !== value.version) throw new Error(`Mock item ${id} has changed.`);
     const updated = { ...value, id, version: this.items[index].version + 1 };
     this.items[index] = updated;
     this.persist();
@@ -263,14 +264,23 @@ function createMockOfflineShowcaseTransport(items: MockItemApi): AppOfflineShowc
       for (const command of commands) {
         try {
           if (command.method === "POST" && command.url === "/api/items") {
-            await items.create(Item.parse(command.body));
+            const create = ItemCreateRequest.parse(command.body);
+            await items.create(Item.parse({ ...create, version: 0 }));
             results.push({ commandId: command.commandId, success: true, status: 201, error: null, reason: "APPLIED" });
             continue;
           }
           const itemId = command.url.match(/\/api\/items\/([^/]+)$/u)?.[1];
           if (!itemId) throw new Error("Invalid Item replay URL.");
-          if (command.method === "PUT") {
-            await items.update(itemId, Item.parse(command.body));
+          if (command.method === "PATCH") {
+            const patch = ItemPatchRequest.parse(command.body);
+            const current = (
+              await items.search(
+                { page: 0, rowsPerPage: Number.MAX_SAFE_INTEGER, sortBy: "name", sortDirection: "asc" },
+                { searchText: "", queryFilters: null },
+              )
+            ).content.find(item => item.id === itemId);
+            if (!current) throw new Error(`Mock item ${itemId} does not exist.`);
+            await items.update(itemId, Item.parse({ ...current, ...patch, id: itemId }));
             results.push({ commandId: command.commandId, success: true, status: 200, error: null, reason: "APPLIED" });
             continue;
           }

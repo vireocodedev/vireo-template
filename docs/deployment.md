@@ -83,7 +83,7 @@ The canonical Compose deployment creates separate database identities. Flyway co
 
 The `prod` profile fails during environment preparation when the resolved datasource URL uses `jdbc:h2:`. H2 remains available for development and tests, but production must use an explicitly configured external datasource so a missing deployment secret cannot silently select embedded storage.
 
-Terminate TLS at the ingress or reverse proxy, forward the standard proxy headers, retain the default `HttpOnly` and `SameSite=Lax` session cookie settings, and store secrets in the deployment platform rather than an image or repository file.
+Terminate TLS at the ingress or reverse proxy, forward the standard proxy headers, retain the default `HttpOnly` and `SameSite=Lax` session cookie settings, and store secrets in the deployment platform rather than an image or repository file. The offline heartbeat stream at `/api/offline/heartbeat/stream` is SSE: preserve its `Cache-Control: no-cache` and `X-Accel-Buffering: no` headers, do not buffer or cache it, and configure an HTTP/1.1-equivalent upstream connection with an idle/read timeout safely above its 5-second heartbeat interval. The canonical Nginx configuration uses 60 seconds.
 
 Before exposing an environment, complete the [security hardening
 guide](security-hardening.md) and review the [threat

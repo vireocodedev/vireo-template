@@ -17,7 +17,8 @@ import { executeParameterizedSqlitePagedQuery, executeParameterizedSqliteQuery }
 import {
   offlineItemIdFor,
   rebaseOfflineItemCommands,
-  type AuthoritativeItemVersion,
+  type AuthoritativeItemState,
+  type CachedOfflineItemState,
   type OfflineItemCommand,
 } from "../services/app-offline-rebase";
 
@@ -220,7 +221,10 @@ const appOfflineMaintenanceHandlers = createSqliteRequestHandlers({
     return null;
   },
   rebaseOfflineCommands: (db, request) => {
-    const { authoritativeItems } = request as unknown as { authoritativeItems: AuthoritativeItemVersion[] };
+    const { authoritativeItems, cachedItems } = request as unknown as {
+      authoritativeItems: AuthoritativeItemState[];
+      cachedItems: CachedOfflineItemState[];
+    };
     runSqliteTransaction(db, () => {
       const queued = db.prepare(`
         SELECT command_id, method, url, body_json, headers_json, created_at
@@ -244,8 +248,16 @@ const appOfflineMaintenanceHandlers = createSqliteRequestHandlers({
       } finally {
         queued.finalize();
       }
-      const rebased = rebaseOfflineItemCommands(commands, authoritativeItems);
+      const rebased = rebaseOfflineItemCommands(commands, authoritativeItems, cachedItems);
       db.exec("DELETE FROM offline_sync_commands WHERE status IN ('PENDING', 'PERMANENTLY_FAILED');");
+      for (const itemId of rebased.affectedItemIds) {
+        const clearFlags = db.prepare("UPDATE items_cache SET pending = 0, conflict = 0 WHERE id = ?;");
+        try {
+          clearFlags.bind([itemId]).step();
+        } finally {
+          clearFlags.finalize();
+        }
+      }
       if (rebased.deletedItemIds.length) appItemBundle.deleteRows(db, rebased.deletedItemIds);
       for (const command of rebased.commands) {
         const itemId = offlineItemIdFor(command);

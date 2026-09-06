@@ -6,11 +6,21 @@ export type {
   ItemMutationResult,
   ItemRequestOptions,
 } from "./api/item.api";
-export { configureItemApi, ItemApiOnline } from "./api/item.api.online";
+export { configureItemApi, ItemApiOnline, searchItemTransport } from "./api/item.api.online";
 export { ItemQuery } from "./api/item.query";
 export { ItemHistoryOverlay, type ItemHistoryOverlayProps } from "./components/overlays/ItemHistoryOverlay";
 export { useItemDeleteMutation } from "./hooks/useItemDeleteMutation";
 export { useItemSearchQuery } from "./hooks/useItemSearchQuery";
 export { usePendingItemUpdateId } from "./hooks/useItemMutationFeedback";
 export { useItemTableColumns } from "./hooks/useItemTableColumns";
-export { Item, ItemStatus, buildValidatedItemSchema, getDefaultItem } from "./models/Item";
+export {
+  Item,
+  ItemCreateRequest,
+  ItemPatchRequest,
+  ItemStatus,
+  ItemTransport,
+  buildValidatedItemSchema,
+  getDefaultItem,
+  toCompleteItemPatchRequest,
+  toItemCreateRequest,
+} from "./models/Item";

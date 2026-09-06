@@ -8,6 +8,8 @@ A validated SSE `heartbeat` is the only event that marks the application online.
 
 `navigator.onLine`, an opened SSE connection, and successful REST responses do not control connectivity.
 
+The canonical Nginx route for `/api/offline/heartbeat/stream` uses HTTP/1.1, disables proxy buffering and caching, and waits 60 seconds for a response. A replacement proxy must preserve the backend's `Cache-Control: no-cache` and `X-Accel-Buffering: no` headers, avoid buffering or caching the stream, and use an idle/read timeout safely above the 5-second heartbeat interval.
+
 The Offline Settings simulator disables the stream for the current browser tab. It exercises the same heartbeat-expiry path as a real outage.
 
 ## Local data
@@ -28,7 +30,7 @@ The first valid heartbeat after an offline period starts this sequence:
 
 Only one tab performs replay and hydration at a time through the Web Locks API. Reads remain available while this runs; Item mutations are temporarily disabled.
 
-Transient replay failures retry with bounded backoff. Permanent rejection pauses replay and marks the optimistic row as a conflict. **Rebase and retry** fetches the authoritative Item snapshot, reapplies the local commands with fresh command IDs and current versions, then replays them in capture order. **Keep server changes** discards the local queue and optimistic rows before hydration.
+Transient replay failures retry with bounded backoff. Permanent rejection pauses replay and marks the optimistic row as a conflict. Replayed creates are `POST` requests with the client UUID; updates are `PATCH` requests with the path UUID and optimistic version only in the body. **Rebase and retry** turns a colliding create into a complete PATCH at the authoritative version. A PATCH whose Item was deleted or is missing becomes a create only when a complete cached Item state remains; consecutive PATCHes then coalesce into that one complete create so a hidden tombstone version cannot conflict with later local intent. Otherwise retry stops with an explicit failure. **Keep server changes** discards the local queue and optimistic rows before hydration.
 
 ## Identity and authorization
 
