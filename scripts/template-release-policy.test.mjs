@@ -174,7 +174,7 @@ test("rejects every local coordinate drift and a supplied tag mismatch", () => {
 
 test("reads and binds the Gradle starter baseline to the advertised JVM coordinate", () => {
   const inputs = readTemplateReleaseInputs();
-  assert.equal(inputs.starterVersion, "0.3.1");
+  assert.equal(inputs.starterVersion, "0.4.0");
   assert.deepEqual(validateTemplateRelease({ ...inputs }), []);
 });
 
