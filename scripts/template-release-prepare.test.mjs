@@ -33,7 +33,7 @@ const npm = [
   "@vireocodedev/sqlite@0.2.4",
   "@vireocodedev/ui@0.3.2",
 ];
-const input = { templateVersion: "0.8.8", createVireoVersion: "0.8.8", jvmVersion: "0.3.2", npm };
+const input = { templateVersion: "0.9.1", createVireoVersion: "0.9.1", jvmVersion: "0.3.2", npm };
 const npmCoordinates = Object.fromEntries(npm.map((coordinate) => {
   const [name, version] = coordinate.lastIndexOf("@") === 0
     ? [coordinate.slice(0, coordinate.lastIndexOf("@")), coordinate.slice(coordinate.lastIndexOf("@") + 1)]
@@ -119,12 +119,12 @@ test("creates a deterministic no-write coordinate plan and preserves historical 
   );
   assert.ok(plan.writes.some((write) => write.path === "contracts/project-upgrade-policy.json"));
   const upgrades = JSON.parse(plan.writes.find((write) => write.path === "contracts/project-upgrade-policy.json").content);
-  assert.ok(upgrades.supportedEdges.some((edge) => edge.from === "0.8.6" && edge.to === "0.8.7" && edge.status === "historical"));
-  assert.ok(upgrades.supportedEdges.some((edge) => edge.from === "0.8.7" && edge.to === "0.8.8" && edge.status === "supported"));
-  assert.match(plan.writes.find((write) => write.path === "docs/project-upgrades.md").content, /The supported adjacent edge is 0\.8\.7-to-0\.8\.8\./u);
+  assert.ok(upgrades.supportedEdges.some((edge) => edge.from === "0.8.7" && edge.to === "0.9.0" && edge.status === "historical"));
+  assert.ok(upgrades.supportedEdges.some((edge) => edge.from === "0.9.0" && edge.to === "0.9.1" && edge.status === "supported"));
+  assert.match(plan.writes.find((write) => write.path === "docs/project-upgrades.md").content, /The supported adjacent edge is 0\.9\.0-to-0\.9\.1\./u);
   const generatedCapabilities = plan.writes.find((write) => write.path === "docs/generated-capabilities.md").content;
-  assert.match(generatedCapabilities, /historical\n0\.8\.6-to-0\.8\.7 transform/u);
-  assert.match(generatedCapabilities, /supported adjacent 0\.8\.7-to-0\.8\.8 project upgrade/u);
+  assert.match(generatedCapabilities, /historical\n0\.8\.7-to-0\.9\.0 transform/u);
+  assert.match(generatedCapabilities, /supported adjacent 0\.9\.0-to-0\.9\.1 project upgrade/u);
   assert.deepEqual(plan.manualRequiredPaths, ["vireocodedev/vireo release projection and upgrade policy"]);
 });
 
