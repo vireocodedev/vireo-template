@@ -88,7 +88,7 @@ test("derives a deterministic marker and App-authored PR identity", () => {
     headRefName: expected.branch,
     baseRefName: "main",
     headRefOid: "c".repeat(40),
-    author: { login: "vireo-release-automation[bot]" },
+    author: { login: "app/vireo-release-automation" },
     title: expected.title,
     body: expected.body,
   };
