@@ -234,7 +234,7 @@ jobs:
           gh auth setup-git
           remote=origin
           query_pull_requests() {
-            gh pr list --repo "$GITHUB_REPOSITORY" --state all --head "$branch" --base main \
+            gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$branch" --base main \
               --json number,state,headRefName,headRefOid,baseRefName,author,title,body > "$RUNNER_TEMP/prepared-template-release-prs.json"
           }
           assert_pull_requests() {
