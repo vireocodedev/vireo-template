@@ -221,7 +221,7 @@ export function createReleasePreparationPlan({ repositoryRoot = root, input, art
       text = replaceStrict(
         text,
         `and the supported\nadjacent ${currentEdge} project upgrade.`,
-        `and the historical\n${currentEdge} transform, plus the supported adjacent ${nextEdge} project upgrade.`,
+        `and the historical\n${currentEdge} transform, and the supported\nadjacent ${nextEdge} project upgrade.`,
         path,
       );
     }
