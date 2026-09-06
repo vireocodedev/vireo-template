@@ -31,7 +31,12 @@ human gaps.
 The source inventory retains immutable ruleset payloads for historical release
 tags, including the immediately prior `starter-template@0.8.6` tag and the
 superseded Template-only `starter-template@0.8.5` release that had no paired
-public `create-vireo@0.8.5` release. They are historical evidence only.
+public `create-vireo@0.8.5` release. It also contains the
+exact no-bypass update-and-deletion payload for the prepared
+`starter-template@0.9.0` tag in
+`.github/rulesets/starter-template-0.9.0.json`. That checked-in payload is a
+reviewable desired state, not evidence that GitHub has applied it: create and
+read back the matching active provider ruleset before pushing the release tag.
 
 The retained `.github/rulesets/starter-template-0.8.7.json` documents the
 already-published `starter-template@0.8.7` coordinate. It is not evidence that GitHub has applied it as a provider control for future versions.
