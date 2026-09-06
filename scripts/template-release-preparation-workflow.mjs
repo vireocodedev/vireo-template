@@ -106,7 +106,9 @@ export function validateExistingPreparationPullRequests({ pullRequests, expected
   if (pullRequests.length === 0) return { action: "create" };
   if (pullRequests.length !== 1) throw new Error("exactly one automation pull request may exist for the deterministic branch");
   const [pullRequest] = pullRequests;
-  const expectedAuthor = `${appSlug}[bot]`;
+  // `gh pr list --json author` (a REST-backed query) surfaces GitHub App
+  // authors as "app/<slug>", not the GraphQL-native "<slug>[bot]" suffix.
+  const expectedAuthor = `app/${appSlug}`;
   if (
     pullRequest.state !== "OPEN" ||
     pullRequest.headRefName !== expected.branch ||
