@@ -112,7 +112,7 @@ wait_for_application "$source_app_port" "$rehearsal_dir/source-app.log"
 
 docker exec "$source_container" psql --username "$database_owner" --dbname "$database_name" \
   --set ON_ERROR_STOP=1 --command \
-  "INSERT INTO item (name, description, quantity, status, deleted) VALUES ('Recovery rehearsal marker', 'Preserved across PostgreSQL major versions', 42, 'ACTIVE', FALSE);" >/dev/null
+  "INSERT INTO item (id, name, description, quantity, status, deleted) VALUES ('00000000-0000-4000-8000-000000000042', 'Recovery rehearsal marker', 'Preserved across PostgreSQL major versions', 42, 'ACTIVE', FALSE);" >/dev/null
 
 source_item_count="$(docker exec "$source_container" psql --username "$database_owner" --dbname "$database_name" --tuples-only --no-align --command 'SELECT count(*) FROM item')"
 source_user_count="$(docker exec "$source_container" psql --username "$database_owner" --dbname "$database_name" --tuples-only --no-align --command 'SELECT count(*) FROM app_user')"

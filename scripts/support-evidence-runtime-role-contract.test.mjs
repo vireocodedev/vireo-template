@@ -45,6 +45,8 @@ test("hosted PostgreSQL support fixtures require the production runtime role", (
     "SPRING_FLYWAY_USER=\"$database_owner\"",
     "prod,dev",
     'pg_isready --host 127.0.0.1 --username "$database_owner" --dbname "$database_name"',
+    "INSERT INTO item (id, name, description, quantity, status, deleted)",
+    "00000000-0000-4000-8000-000000000042",
   ]) {
     assert.ok(
       recovery.includes(requiredRecoveryFragment),
@@ -55,6 +57,10 @@ test("hosted PostgreSQL support fixtures require the production runtime role", (
   assert.ok(
     !recovery.includes('pg_isready --username "$database_owner" --dbname "$database_name"'),
     "database recovery rehearsal must not accept the temporary PostgreSQL initialization socket",
+  );
+  assert.ok(
+    !recovery.includes("INSERT INTO item (name, description, quantity, status, deleted)"),
+    "database recovery rehearsal must provide the required item UUID explicitly",
   );
 });
 
