@@ -115,8 +115,14 @@ jobs:
         run: |
           test -n "$HOST" && test -n "$USER" && test -n "$PORT"
           ssh_command=(ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts -p "$PORT" "$USER@$HOST")
-          archive="$(find release-input -name '*.tar.gz' -type f -print -quit)"
-          manifest="$(find release-input -name flagship-demo-manifest.json -type f -print -quit)"
+          mapfile -d '' archives < <(find release-input -name '*.tar.gz' -type f -print0)
+          mapfile -d '' manifests < <(find release-input -name flagship-demo-manifest.json -type f -print0)
+          if [[ ${#archives[@]} -ne 1 || ${#manifests[@]} -ne 1 ]]; then
+            printf 'Expected exactly one release archive and one release manifest.\n' >&2
+            exit 1
+          fi
+          archive="$(realpath "${archives[0]}")"
+          manifest="$(realpath "${manifests[0]}")"
           transaction="$(node -p 'require(process.argv[1]).transaction' "$manifest")"
           archive_bytes="$(wc -c <"$archive")"; archive_sha="$(sha256sum "$archive" | awk '{print $1}')"
           manifest_sha="$(sha256sum "$manifest" | awk '{print $1}')"

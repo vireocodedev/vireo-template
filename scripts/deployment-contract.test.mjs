@@ -16,6 +16,7 @@ import {
 const root = resolve(import.meta.dirname, "..");
 const helper = join(root, "scripts/compose-database-contract.sh");
 const deploy = join(root, "deploy/hetzner/deploy.sh");
+const flagshipWorkflow = readFileSync(join(root, ".github/workflows/flagship-demo.yml"), "utf8");
 
 function spawnReceiver(directory, payload, originalCommand, extraEnvironment = {}) {
   const inputPath = join(directory, "receiver-input.bin");
@@ -46,6 +47,23 @@ test("flagship policy binds guarded production reset and host-operated availabil
   assert.match(docs, /journalctl -u vireo-flagship-demo-reset\.service/u);
   assert.match(docs, /journalctl -u vireo-flagship-demo-watchdog\.service/u);
   assert.doesNotMatch(docs, /Retained pre-reset, reset, and post-reset evidence/u);
+});
+
+test("flagship release upload requires exactly one absolute archive and manifest path", () => {
+  for (const requiredFragment of [
+    "mapfile -d '' archives < <(find release-input -name '*.tar.gz' -type f -print0)",
+    "mapfile -d '' manifests < <(find release-input -name flagship-demo-manifest.json -type f -print0)",
+    "if [[ ${#archives[@]} -ne 1 || ${#manifests[@]} -ne 1 ]]; then",
+    "Expected exactly one release archive and one release manifest.",
+    'archive="$(realpath "${archives[0]}")"',
+    'manifest="$(realpath "${manifests[0]}")"',
+    "transaction=\"$(node -p 'require(process.argv[1]).transaction' \"$manifest\")\"",
+  ]) {
+    assert.ok(
+      flagshipWorkflow.includes(requiredFragment),
+      `flagship release upload must retain ${requiredFragment}`,
+    );
+  }
 });
 
 function writeEnvironment(contents) {

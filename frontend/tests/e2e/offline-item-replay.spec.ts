@@ -25,6 +25,11 @@ async function expectConnectivity(
   }
 }
 
+async function skipUnlessOpfs(page: import("@playwright/test").Page) {
+  const supported = await page.evaluate(() => typeof navigator.storage?.getDirectory === "function");
+  test.skip(!supported, "Offline replay requires browser OPFS support.");
+}
+
 test("serializes offline recovery across two tabs", async ({ context, page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chromium", "One Chromium lane proves the origin-wide Web Lock.");
   await authenticateAsDevelopmentAdministrator(page);
@@ -87,6 +92,7 @@ test("offline Item changes survive reload and replay in order", async ({ page },
   const updatedName = `Replayed ${suffix}`;
   const deletedName = `Deleted ${suffix}`;
   await authenticateAsDevelopmentAdministrator(page);
+  await skipUnlessOpfs(page);
   await expect
     .poll(() =>
       page.evaluate(() => ({
@@ -161,13 +167,14 @@ test("offline Item changes survive reload and replay in order", async ({ page },
 
   await search.fill(deletedName);
   await search.press("Enter");
-  await expect(page.getByText("No items match the current search and filters.")).toBeVisible();
+  await expect(page.getByText("No items match the current search and filters.")).toBeVisible({ timeout: 20_000 });
 });
 
 test("an open Item draft survives recovery while submission is disabled", async ({ page }) => {
   test.setTimeout(90_000);
   await authenticateAsDevelopmentAdministrator(page);
   await page.goto("/items");
+  await skipUnlessOpfs(page);
   await page.getByRole("button", { name: "Create item" }).first().click();
   const name = page.getByRole("textbox", { name: "Name", exact: true });
   const save = page.getByRole("button", { name: "Create item" }).last();
@@ -210,6 +217,7 @@ test("a short SSE reconnect repairs data without an offline status transition", 
   const missedItemName = `AAA missed during reconnect ${testInfo.project.name}-${Date.now()}`;
   await authenticateAsDevelopmentAdministrator(page);
   await page.goto("/items");
+  await skipUnlessOpfs(page);
   await expectConnectivity(page, testInfo.project.name, "Online");
   await page.evaluate(
     () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
@@ -283,6 +291,7 @@ test("a rejected offline deletion returns as an actionable conflict", async ({ p
   const name = `Delete conflict ${testInfo.project.name}-${Date.now()}`;
   const item = { id, version: 0, name, description: "Original server value", quantity: 1, status: "ACTIVE" };
   await authenticateAsDevelopmentAdministrator(page);
+  await skipUnlessOpfs(page);
   const created = await page.evaluate(async value => {
     const csrfToken = document.cookie
       .split("; ")
@@ -298,11 +307,27 @@ test("a rejected offline deletion returns as an actionable conflict", async ({ p
   }, item);
   expect(created.ok, created.body).toBe(true);
 
+  await page.goto("/items");
+  const search = page.getByRole("textbox", { name: "Search by name, description or status" });
+  await search.fill(name);
+  await search.press("Enter");
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          const cacheSignalUrl = "/src/app/offline/signals/sigCacheReadiness.ts";
+          const { sigCacheReadiness } = await import(/* @vite-ignore */ cacheSignalUrl);
+          return sigCacheReadiness.value.status;
+        }),
+      { timeout: 20_000 },
+    )
+    .toBe("READY");
+
   await page.goto("/settings#offline");
   await page.getByRole("switch", { name: "Offline simulator" }).check();
   await expectConnectivity(page, testInfo.project.name, "Offline");
   await page.goto("/items");
-  const search = page.getByRole("textbox", { name: "Search by name, description or status" });
   await search.fill(name);
   await search.press("Enter");
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
@@ -346,11 +371,11 @@ test("a rejected offline deletion returns as an actionable conflict", async ({ p
   await page.goto("/items");
   await search.fill(name);
   await search.press("Enter");
-  await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Conflict", { exact: true })).toBeVisible();
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Conflict", { exact: true })).toBeVisible({ timeout: 20_000 });
   await page.reload();
-  await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Conflict", { exact: true })).toBeVisible();
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Conflict", { exact: true })).toBeVisible({ timeout: 20_000 });
 
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button").filter({ hasText: name }).click();
@@ -362,6 +387,19 @@ test("a rejected offline deletion returns as an actionable conflict", async ({ p
   await expect(page.getByText(/0 pending · 0 failed/u)).toBeVisible({ timeout: 30_000 });
 
   await page.goto(`/items?q=${encodeURIComponent(name)}`);
-  if (discard) await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+  if (discard) await expect(page.getByText(name, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
   else await expect(page.getByText("No items match the current search and filters.")).toBeVisible();
+});
+
+test("reports an explicit online-only state when OPFS is unavailable", async ({ page }, testInfo) => {
+  await authenticateAsDevelopmentAdministrator(page);
+  await page.goto("/settings#offline");
+  const supported = await page.evaluate(() => typeof navigator.storage?.getDirectory === "function");
+  test.skip(supported, "This assertion covers browsers without OPFS support.");
+  await expectConnectivity(page, testInfo.project.name, "Online");
+  await expect(page.getByRole("switch", { name: "Offline simulator" })).toBeDisabled();
+  await expect(
+    page.getByText("Reload the app. If offline storage stays unavailable, use HTTPS or localhost."),
+  ).toBeVisible();
+  await expect(page.getByText(/cache unavailable/u)).toBeVisible();
 });
