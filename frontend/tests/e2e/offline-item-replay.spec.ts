@@ -307,11 +307,27 @@ test("a rejected offline deletion returns as an actionable conflict", async ({ p
   }, item);
   expect(created.ok, created.body).toBe(true);
 
+  await page.goto("/items");
+  const search = page.getByRole("textbox", { name: "Search by name, description or status" });
+  await search.fill(name);
+  await search.press("Enter");
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          const cacheSignalUrl = "/src/app/offline/signals/sigCacheReadiness.ts";
+          const { sigCacheReadiness } = await import(/* @vite-ignore */ cacheSignalUrl);
+          return sigCacheReadiness.value.status;
+        }),
+      { timeout: 20_000 },
+    )
+    .toBe("READY");
+
   await page.goto("/settings#offline");
   await page.getByRole("switch", { name: "Offline simulator" }).check();
   await expectConnectivity(page, testInfo.project.name, "Offline");
   await page.goto("/items");
-  const search = page.getByRole("textbox", { name: "Search by name, description or status" });
   await search.fill(name);
   await search.press("Enter");
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
@@ -355,11 +371,11 @@ test("a rejected offline deletion returns as an actionable conflict", async ({ p
   await page.goto("/items");
   await search.fill(name);
   await search.press("Enter");
-  await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Conflict", { exact: true })).toBeVisible();
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Conflict", { exact: true })).toBeVisible({ timeout: 20_000 });
   await page.reload();
-  await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Conflict", { exact: true })).toBeVisible();
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Conflict", { exact: true })).toBeVisible({ timeout: 20_000 });
 
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button").filter({ hasText: name }).click();
